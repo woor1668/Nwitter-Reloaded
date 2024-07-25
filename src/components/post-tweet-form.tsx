@@ -1,7 +1,9 @@
-import { addDoc, collection } from "firebase/firestore";
+import { addDoc, collection, updateDoc } from "firebase/firestore";
 import React, { useState } from "react";
 import styled from "styled-components"
-import { auth, db } from "../firebase";
+import { auth, db, storage } from "../firebase";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { Delete } from "./svg";
 
 const Form = styled.form`
     display: flex;
@@ -24,12 +26,18 @@ const TextArea = styled.textarea`
         border-color: #1d9bf0;
     }
 `;
-const AttachFileButton = styled.label`
+const File = styled.div`
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+`;
+const AttachFileButton = styled.label<{ $hasFile: boolean }>`
     padding: 10px 0px;
     color: #1d9bf0;
     text-align: center;
     border-radius: 20px;
     border: 1px solid #1d9bf0;
+    background-color: ${props => (props.$hasFile ? "transparent" : "white")};
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
@@ -50,6 +58,9 @@ const SubmitBtn = styled.input`
         opacity: 0.9;
     }
 `;
+const DelDiv = styled.div`
+    
+`
 
 export default function PostTweetForm(){
     const [state, setState] = useState({ isLoading: false, tweet: ""});
@@ -60,22 +71,43 @@ export default function PostTweetForm(){
     };
     const onFileChange = (e: React.ChangeEvent<HTMLInputElement>)=>{
         const {files} = e.target;
-        if(file && files?.length === 1){
+        if(files && files?.length === 1){
+            if(files[0].size / (1024 * 1024) >= 1){
+                setFile(null);
+                return alert("파일 크기가 1MB 이상입니다. 다른 파일을 선택하세요.");
+            }
             setFile(files[0]);
-        }
+        };
     };
+    const delFile = () =>{
+        if(!file) return;
+        const ok = confirm("파일을 삭제하시겠습니까?");
+        if(ok){
+            setFile(null);
+        }
+    }
     const onSubmit = async(e: React.FormEvent<HTMLFormElement>)=>{
         e.preventDefault();
         const user = auth.currentUser;
         if(!user || isLoading || tweet=== "" || tweet.length > 180) return;
         setState({ ...state, isLoading: true });
         try {
-            await addDoc(collection(db, "tweets"),{
+            const doc = await addDoc(collection(db, "tweets"),{
                 tweet,
                 createdAt: Date.now(),
                 userNm: user.displayName || "Anouymous",
                 userId: user.uid
             });
+            if(file){
+                const locationRef = ref(storage, `tweets/${user.uid}/${doc.id}`);
+                const result = await uploadBytes(locationRef, file);
+                const url = await getDownloadURL(result.ref);
+                await updateDoc(doc, {
+                    photo_url: url
+                }) 
+            }
+            setState({...state, tweet: ""});
+            setFile(null);
         } catch (e) {
             
         }finally{
@@ -85,8 +117,9 @@ export default function PostTweetForm(){
     return(
          /* htmlFor: 동일한 이름을 가진 ID와 연결 */
         <Form onSubmit={onSubmit}>
-            <TextArea rows={5} maxLength={180} onChange={onChange} value={tweet} placeholder="글을 작성하세요"/>
-            <AttachFileButton  htmlFor="file">{file ? "Photo added" : "Add photo"}</AttachFileButton>
+            <TextArea rows={5} maxLength={180} onChange={onChange} value={tweet} placeholder="글을 작성하세요" required/>
+            {file && <File>{file?.name}<DelDiv onClick={delFile}><Delete/></DelDiv></File>}
+            <AttachFileButton $hasFile={!file} htmlFor="file">{file ? `Photo added` : "Add photo"}</AttachFileButton>
             <AttachFileInput onChange={onFileChange} type="file" id="file" accept="image/*"/>
             <SubmitBtn type="submit" value={isLoading ? "포스팅중...":"작성"}/>
         </Form>
