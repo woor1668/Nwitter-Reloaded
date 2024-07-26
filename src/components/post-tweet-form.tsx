@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import styled from "styled-components"
 import { auth, db, storage } from "../firebase";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { Delete } from "./svg";
+import SvgIcon from "./svg";
 
 const Form = styled.form`
     display: flex;
@@ -118,7 +118,7 @@ export default function PostTweetForm(){
          /* htmlFor: 동일한 이름을 가진 ID와 연결 */
         <Form onSubmit={onSubmit}>
             <TextArea rows={5} maxLength={180} onChange={onChange} value={tweet} placeholder="글을 작성하세요" required/>
-            {file && <File>{file?.name}<DelDiv onClick={delFile}><Delete/></DelDiv></File>}
+            {file && <File>{file?.name}<DelDiv onClick={delFile}><SvgIcon name="delete"/></DelDiv></File>}
             <AttachFileButton $hasFile={!file} htmlFor="file">{file ? `Photo added` : "Add photo"}</AttachFileButton>
             <AttachFileInput onChange={onFileChange} type="file" id="file" accept="image/*"/>
             <SubmitBtn type="submit" value={isLoading ? "포스팅중...":"작성"}/>

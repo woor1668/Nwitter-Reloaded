@@ -1,7 +1,7 @@
 import { Link, Outlet, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { auth } from "../firebase";
-import { Home, Logout, User } from "./svg";
+import SvgIcon from "./svg";
 
 const Wrapper = styled.div`
     display: grid;
@@ -53,16 +53,16 @@ export default function Layout(){
             <Menu>
                 <Link to={"/"}>
                     <MenuItem>
-                        <Home/>
+                        <SvgIcon name="home"/>
                     </MenuItem>
                 </Link>
                 <Link to={"/profile"}>
                     <MenuItem>
-                        <User/>
+                        <SvgIcon name="user"/>
                     </MenuItem>
                 </Link>
                 <MenuItem className="log-out" onClick={onLogout}>
-                   <Logout/>
+                    <SvgIcon name="logout"/>
                 </MenuItem>
             </Menu>
             <Outlet/>

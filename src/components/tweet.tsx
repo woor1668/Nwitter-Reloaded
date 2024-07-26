@@ -1,10 +1,10 @@
 import styled from "styled-components";
 import { ITweet } from "./timeline";
 import { auth, db, storage } from "../firebase";
-import { collection, deleteDoc, doc, getDocs, query, where } from "firebase/firestore";
-import { deleteObject, ref } from "firebase/storage";
+import { collection, deleteDoc, doc, getDocs, query } from "firebase/firestore";
+import { deleteObject, getDownloadURL, ref } from "firebase/storage";
 import { useEffect, useRef, useState } from "react";
-import { MoreHor, User } from "./svg";
+import SvgIcon from "./svg";
 import Dropdown from "./dropdown";
 
 const Wrapper = styled.div`
@@ -28,17 +28,20 @@ const UserDiv = styled.div`
     width: 30px;
   }
 `;
+
 const AvatarImg = styled.img`
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
 `;
+
 const Column = styled.div``;
 
 const Header = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
+  position: relative;
 `;
 
 const UserNm = styled.span`
@@ -87,48 +90,16 @@ export default function Tweet({
   const user = auth.currentUser;
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const morDivRef = useRef<HTMLDivElement | null>(null);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
-
-  const updateDropdownPosition = () => {
-    if (morDivRef.current) {
-      const rect = morDivRef.current.getBoundingClientRect();
-      setDropdownPosition({
-        top: rect.bottom,
-        left: rect.left,
-      });
-    }
-  };
-
-  useEffect(() => {
-    // Initial position update
-    updateDropdownPosition();
-
-    const handleResize = () => updateDropdownPosition();
-
-    // Add event listener for window resize
-    window.addEventListener('resize', handleResize);
-
-    // Cleanup on component unmount
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
-  }, [showDropdown]);
-
-  const handleMoreOptionsClick = () => {
-    setShowDropdown(prev => !prev);
-  };
 
   useEffect(() => {
     const fetchAvatar = async () => {
       try {
-        const avatarQuery = query(
-          collection(db, "avatar"),
-        );
-        const snapshot = await getDocs(avatarQuery);
-        if (!snapshot.empty) {
-          const docData = snapshot.docs[0].data();
-          setAvatarUrl(docData.photoURL || null);
+        if (userId) {
+          const avatarRef = ref(storage, `avatar/${userId}`);
+          const url = await getDownloadURL(avatarRef);
+          setAvatarUrl(url);
         }
       } catch (error) {
         console.error("Error fetching avatar:", error);
@@ -139,19 +110,19 @@ export default function Tweet({
   }, [userId]);
 
   const onDelete = async () => {
-    if (confirm("트윗을 삭제하시겠습니까?") && user?.uid === userId && !isLoading) {
-      try {
-        setLoading(true);
-        await deleteDoc(doc(db, "tweets", id));
-        if (photo_url) {
-          const photoRef = ref(storage, `tweets/${userId}/${id}`);
-          await deleteObject(photoRef);
+    setShowDropdown(prevState => !prevState);
+        if (confirm("트윗을 삭제하시겠습니까?") && user?.uid === userId && !isLoading) {
+        try {
+            setLoading(true);
+            await deleteDoc(doc(db, "tweets", id));
+            if (photo_url) {
+            const photoRef = ref(storage, `tweets/${userId}/${id}`);
+            await deleteObject(photoRef);
+            }
+        } catch (e) {
+        } finally {
+            setLoading(false);
         }
-      } catch (error) {
-        console.error("트윗 삭제 중 오류 발생:", error);
-      } finally {
-        setLoading(false);
-      }
     }
   };
 
@@ -159,29 +130,48 @@ export default function Tweet({
     // Implement edit functionality or remove if not needed
   };
 
+  const handleMorDivClick = (event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent click from closing dropdown
+    setShowDropdown(prevState => !prevState);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+        if (morDivRef.current && !morDivRef.current.contains(event.target as Node) 
+         && dropdownRef.current && !dropdownRef.current.contains(event.target as Node))
+         {
+        setShowDropdown(false);
+        }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const options = [
+    { label: 'Delete', onClick: onDelete },
+    { label: 'Edit', onClick: onEdit }
+  ];
+
   return (
     <Wrapper>
       <Column>
         <UserDiv>
-            {avatarUrl ?  <AvatarImg src={avatarUrl}/> : <User />}
+          {avatarUrl ? <AvatarImg src={avatarUrl} /> : <SvgIcon name="user" />}
         </UserDiv>
       </Column>
       <Column>
         <Header>
-          <UserNm>{userNm}</UserNm>     
+          <UserNm>{userNm}</UserNm>
           {user?.uid === userId && (
-            <MorDiv ref={morDivRef} onClick={handleMoreOptionsClick}>
-              <MoreHor />
+            <MorDiv ref={morDivRef} onClick={handleMorDivClick}>
+              <SvgIcon name="moreHor" />
             </MorDiv>
           )}
-          <Dropdown
-            moreOptionsRef={morDivRef}
-            showDropdown={showDropdown}
-            setShowDropdown={setShowDropdown}
-            dropdownPosition={dropdownPosition}
-            onEdit={onEdit}
-            onDelete={onDelete}
-          />
+          {showDropdown && (
+            <Dropdown ref={dropdownRef} option={options} />
+          )}
         </Header>
         <Payload>{tweet}</Payload>
         {photo_url && <Photo src={photo_url} />}

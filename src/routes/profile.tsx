@@ -1,12 +1,12 @@
 import styled from "styled-components";
 import { auth, db, storage } from "../firebase";
 import { useEffect, useState } from "react";
-import { User } from "../components/svg";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { Unsubscribe, updateProfile } from "firebase/auth";
 import { collection, limit, onSnapshot, orderBy, query, where } from "firebase/firestore";
 import Tweet from "../components/tweet";
 import { ITweet } from "../components/timeline";
+import SvgIcon from "../components/svg";
 
 const Wrapper = styled.div`
     display: flex;
@@ -40,6 +40,7 @@ const Name = styled.span`
     font: 22px;
 `;
 const Tweets = styled.div`
+    width: 100% ;
     display: flex;
     gap: 10px;
     flex-direction: column;
@@ -101,7 +102,7 @@ export default function Profile(){
     return( 
     <Wrapper>
         <AvatarUpload htmlFor="avatar" title="이미지 올리기">
-            {avatar ? <AvatarImg src={avatar}/> : <User/>}
+            {avatar ? <AvatarImg src={avatar}/> : <SvgIcon name="user" />}
         </AvatarUpload>
         <AvatarInput onChange={onAvatarChange} id="avatar" type="file" accept= "image/*"/>
         <Name>
@@ -111,5 +112,5 @@ export default function Profile(){
             {tweets.map(tweet => <Tweet key={tweet.id}{...tweet} />)}
         </Tweets>
     </Wrapper>
-)
+    )
 }
