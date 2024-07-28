@@ -33,4 +33,12 @@ export default {
 
 # npm install firebase@10.1.0
 
+# firebase hosting
+
 # npm install -g firebase-tools
+
+# firebase login
+
+# firebase init
+
+# npm run bulid
