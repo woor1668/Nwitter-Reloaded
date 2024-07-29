@@ -1,6 +1,6 @@
 import styled from "styled-components";
 import { auth, db, storage } from "../firebase";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { Unsubscribe, updateProfile } from "firebase/auth";
 import { collection, limit, onSnapshot, orderBy, query, where } from "firebase/firestore";
@@ -36,8 +36,25 @@ const AvatarImg = styled.img`
 const AvatarInput = styled.input`
     display:none;
 `;
-const Name = styled.span`
-    font: 22px;
+const NameDiv = styled.div`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+`;
+const SvgSpan = styled.span`
+   
+`;
+
+
+const Name = styled.input<{ $isEditable: boolean }>`
+    background-color: transparent;
+    border: none;
+    color: white;
+    text-align: center;
+    pointer-events: ${(props) => (props.$isEditable ? "auto" : "none")};
+    font-size: 22px;
+    border-bottom: ${(props) => (props.$isEditable ? "1px solid white" : "none")};
+    outline: none;
 `;
 const Tweets = styled.div`
     width: 100% ;
@@ -54,8 +71,13 @@ const Tweets = styled.div`
 `;
 export default function Profile(){
     const user = auth.currentUser;
-    const[avatar, setAvatar] = useState(user?.photoURL);
+    //const[avatar, setAvatar] = useState(user?.photoURL);
     const [tweets, setTweet] = useState<ITweet[]>([]);
+    const [state, setState] = useState({avatar: user?.photoURL, name: `${user?.displayName ?? "Anonymous"}`, isEdit: false});
+    const { avatar, name, isEdit } = state;
+    const nameRef = useRef<HTMLInputElement>(null);
+    const prevNameRef = useRef(name);
+
     const onAvatarChange =  async(e:React.ChangeEvent<HTMLInputElement>) =>{
         const {files} = e.target;
         if(!user) return;
@@ -68,8 +90,22 @@ export default function Profile(){
             const result = await uploadBytes(localtionRef, file);
             const url = await getDownloadURL(result.ref);
             await updateProfile(user, {photoURL:url});
-            setAvatar(url);
+            setState({ ...state, avatar: url });
         }
+    };
+    const onClickEdit = () =>{
+        if (isEdit && prevNameRef.current !== name) {
+            if (confirm("저장 하시겠습니까?")) {
+                updateProfile(user!, { displayName: name });
+            } else {
+                setState((prevState) => ({ ...prevState, name: prevNameRef.current }));
+            }
+        }
+        setState((prevState) => ({ ...prevState, isEdit: !prevState.isEdit }));
+    };
+
+    const onChangeName = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setState((prevState) => ({ ...prevState, name: e.target.value }));
     };
 
     useEffect(()=> {
@@ -98,6 +134,11 @@ export default function Profile(){
             unsubscribe && unsubscribe();
         }
     },[]);
+    useEffect(() => {
+        if (isEdit && nameRef.current) {
+            nameRef.current.focus();
+        }
+    }, [isEdit]);
 
     return( 
     <Wrapper>
@@ -105,12 +146,21 @@ export default function Profile(){
             {avatar ? <AvatarImg src={avatar}/> : <SvgIcon name="user" />}
         </AvatarUpload>
         <AvatarInput onChange={onAvatarChange} id="avatar" type="file" accept= "image/*"/>
-        <Name>
-            {user?.displayName ?? "Anonymous"}
-        </Name>
-        <Tweets>
-            {tweets.map(tweet => <Tweet key={tweet.id}{...tweet} />)}
-        </Tweets>
+        <NameDiv>
+        <Name
+            type="text"
+            value={name}
+            onChange={onChangeName}
+            $isEditable={isEdit}
+            ref={nameRef}
+        />
+            <SvgSpan onClick={onClickEdit}  title={isEdit ? "저장" : "수정"}>
+                <SvgIcon name="edit"/>
+            </SvgSpan>
+        </NameDiv>
+            <Tweets>
+                {tweets.map(tweet => <Tweet key={tweet.id}{...tweet} />)}
+            </Tweets>
     </Wrapper>
     )
 }

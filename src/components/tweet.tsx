@@ -1,11 +1,14 @@
 import styled from "styled-components";
 import { ITweet } from "./timeline";
 import { auth, db, storage } from "../firebase";
-import { deleteDoc, doc } from "firebase/firestore";
+import { deleteDoc, doc, updateDoc } from "firebase/firestore";
 import { deleteObject, getDownloadURL, ref } from "firebase/storage";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import SvgIcon from "./svg";
 import Dropdown from "./dropdown";
+import { FirebaseError } from "firebase/app";
+import Modal from "./modal";
+import RePostTweetForm from "./re-post-tweet-form";
 
 const Wrapper = styled.div`
   display: grid;    
@@ -86,12 +89,20 @@ export default function Tweet({
   userId,
   id
 }: TweetProps) {
-  const [isLoading, setLoading] = useState(false);
   const user = auth.currentUser;
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const morDivRef = useRef<HTMLDivElement | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
-  const [showDropdown, setShowDropdown] = useState(false);
+
+  const [state, setState] = useState({
+    isLoading: false,
+    avatarUrl: null as string | null,
+    showDropdown: false,
+    isModalOpen: false,
+    modalContent: tweet,
+    modalFileUrl: photo_url 
+  });
+
+  const { isLoading, avatarUrl, showDropdown, isModalOpen, modalContent, modalFileUrl  } = state;
 
   useEffect(() => {
     const fetchAvatar = async () => {
@@ -99,49 +110,64 @@ export default function Tweet({
         if (userId) {
           const avatarRef = ref(storage, `avatar/${userId}`);
           const url = await getDownloadURL(avatarRef);
-          setAvatarUrl(url);
+          setState(prevState => ({ ...prevState, avatarUrl: url }));
         }
-      } catch (error) {
-        console.error("Error fetching avatar:", error);
+      } catch (e) {
+        if (e instanceof FirebaseError && e.code !== "storage/object-not-found") {
+          console.error("Error fetching avatar:", e);
+        }
+        setState(prevState => ({ ...prevState, avatarUrl: null })); // Fallback to default avatar
       }
     };
 
     fetchAvatar();
   }, [userId]);
 
-  const onDelete = async () => {
-    setShowDropdown(prevState => !prevState);
-        if (confirm("트윗을 삭제하시겠습니까?") && user?.uid === userId && !isLoading) {
-        try {
-            setLoading(true);
-            await deleteDoc(doc(db, "tweets", id));
-            if (photo_url) {
-            const photoRef = ref(storage, `tweets/${userId}/${id}`);
-            await deleteObject(photoRef);
-            }
-        } catch (e) {
-        } finally {
-            setLoading(false);
+  const onDelete = useCallback(async () => {
+    setState(prevState => ({ ...prevState, showDropdown: false }));
+    if (confirm("트윗을 삭제하시겠습니까?") && user?.uid === userId && !isLoading) {
+      try {
+        setState(prevState => ({ ...prevState, isLoading: true }));
+        await deleteDoc(doc(db, "tweets", id));
+        if (photo_url) {
+          const photoRef = ref(storage, `tweets/${userId}/${id}`);
+          await deleteObject(photoRef);
         }
+      } catch (e) {
+        console.error("Error deleting tweet:", e);
+      } finally {
+        setState(prevState => ({ ...prevState, isLoading: false }));
+      }
     }
-  };
+  }, [user?.uid, userId, isLoading, id, photo_url]);
 
-  const onEdit = () => {
-    // Implement edit functionality or remove if not needed
-  };
+  const onEdit = useCallback(() => {
+    setState(prevState => ({ ...prevState, isModalOpen: true, showDropdown: false }));
+  }, []);
 
-  const handleMorDivClick = (event: React.MouseEvent) => {
+  const handleMorDivClick = useCallback((event: React.MouseEvent) => {
     event.stopPropagation(); // Prevent click from closing dropdown
-    setShowDropdown(prevState => !prevState);
-  };
+    setState(prevState => ({ ...prevState, showDropdown: !prevState.showDropdown }));
+  }, []);
+
+  const reConentSave = useCallback((newContent: string, newFile?: File) => {
+    // Handle save logic here
+    console.log('New content:', newContent);
+    console.log('New file:', newFile);
+    setState(prevState => ({
+      ...prevState,
+      isModalOpen: false,
+      modalContent: newContent,
+      modalFileUrl: newFile ? URL.createObjectURL(newFile) : modalFileUrl,
+    }));
+  }, [modalFileUrl]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-        if (morDivRef.current && !morDivRef.current.contains(event.target as Node) 
-         && dropdownRef.current && !dropdownRef.current.contains(event.target as Node))
-         {
-        setShowDropdown(false);
-        }
+      if (morDivRef.current && !morDivRef.current.contains(event.target as Node) 
+        && dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setState(prevState => ({ ...prevState, showDropdown: false }));
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
@@ -158,7 +184,14 @@ export default function Tweet({
     <Wrapper>
       <Column>
         <UserDiv>
-          {avatarUrl ? <AvatarImg src={avatarUrl} /> : <SvgIcon name="user" />}
+          {avatarUrl ? (
+            <AvatarImg
+              src={avatarUrl}
+              onError={() => setState(prevState => ({ ...prevState, avatarUrl: null }))}
+            />
+          ) : (
+            <SvgIcon name="user" />
+          )}
         </UserDiv>
       </Column>
       <Column>
@@ -176,6 +209,13 @@ export default function Tweet({
         <Payload>{tweet}</Payload>
         {photo_url && <Photo src={photo_url} />}
       </Column>
+      <Modal isOpen={isModalOpen} onClose={() => setState(prevState => ({ ...prevState, isModalOpen: false }))}>
+        <RePostTweetForm
+          initialContent={modalContent}
+          initialFileUrl={modalFileUrl}
+          onSave={reConentSave}
+        />
+      </Modal>
     </Wrapper>
   );
 }

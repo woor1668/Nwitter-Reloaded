@@ -66,7 +66,9 @@ export default function Timeline(){
             unsubscribe && unsubscribe();
         }
     },[]);
-    return<Wrapper>
-        {tweets.map(tweet => <Tweet key={tweet.id}{...tweet} />)}
-    </Wrapper>
+    return(
+        <Wrapper>
+            {tweets.map(tweet => <Tweet key={tweet.id}{...tweet} />)}            
+        </Wrapper>
+    )
 }
