@@ -40,6 +40,37 @@ export const AttachFileButton = styled.label<{ $hasFile: boolean }>`
 `;
 export const AttachFileInput = styled.input`
     display: none;
+    
+`;
+export const FileForm = styled.div`
+    display: flex;
+    position: relative;
+    width: 100%; 
+`;
+export const CloseButton = styled.div`
+    position: absolute;
+    background-color: rgba(0,0,0,0.7);
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    top: 10px;
+    right: 10px;
+    color: white;
+    display: flex;
+    align-items: center; 
+    justify-content: center; 
+    cursor: pointer;
+    &:hover{
+        background-color: rgba(0,0,0,0.5);
+    }
+    svg {
+        fill: none;
+        width: 25px;
+        height: 25px; 
+    }
+`;
+export const Img = styled.img`
+    max-width: 100%; 
 `;
 export const SubmitBtn = styled.input`
     background-color: #1d9bf0;
@@ -54,5 +85,3 @@ export const SubmitBtn = styled.input`
         opacity: 0.9;
     }
 `;
-
-export const DelDiv = styled.div``;

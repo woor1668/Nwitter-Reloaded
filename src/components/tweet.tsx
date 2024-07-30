@@ -99,7 +99,7 @@ export default function Tweet({
     showDropdown: false,
     isModalOpen: false,
     modalContent: tweet,
-    modalFileUrl: photo_url 
+    modalFileUrl: photo_url as string | null
   });
 
   const { isLoading, avatarUrl, showDropdown, isModalOpen, modalContent, modalFileUrl  } = state;

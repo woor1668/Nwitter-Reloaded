@@ -14,6 +14,8 @@ const ModalWrapper = styled.div`
 `;
 
 const ModalContentWrapper  = styled.div`
+  display: grid;
+  gap: 10px;
   background-color: black;
   padding: 20px;
   border-radius: 8px;
@@ -23,13 +25,14 @@ const ModalContentWrapper  = styled.div`
 `;
 
 const CloseButton = styled.button`
-  align-items: right;
   background: none;
   border: none;
   border-radius: 20%;
   box-shadow: 0px 0px 2px 2px rgba(255, 255, 255, 0.5);
-  font-size: 20px;
   color: white;
+  font-size: 20px;
+  width: 25px;
+  margin-left:auto;
   cursor: pointer;
 `;
 

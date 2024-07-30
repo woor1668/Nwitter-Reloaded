@@ -2,8 +2,9 @@ import { addDoc, collection, updateDoc } from "firebase/firestore";
 import React, { useState } from "react";
 import { auth, db, storage } from "../firebase";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { Form, TextArea, AttachFileButton, AttachFileInput, SubmitBtn, CloseButton, FileForm, Img } from "./filecss";
 import SvgIcon from "./svg";
-import { Form, TextArea, AttachFileButton, AttachFileInput, File, DelDiv, SubmitBtn } from "./filecss";
+import Swal from "sweetalert2";
 
 export default function PostTweetForm(){
     const [state, setState] = useState({ isLoading: false, tweet: ""});
@@ -27,14 +28,6 @@ export default function PostTweetForm(){
             setFile(files[0]);
         };
     };
-    const delFile = () =>{
-        if(!file) return;
-        const ok = confirm("파일을 삭제하시겠습니까?");
-        if(ok){
-            setFile(null);
-            setFilePreview(null);
-        }
-    }
     const onSubmit = async(e: React.FormEvent<HTMLFormElement>)=>{
         e.preventDefault();
         const user = auth.currentUser;
@@ -62,15 +55,37 @@ export default function PostTweetForm(){
         }finally{
             setState((prevState) => ({ ...prevState, isLoading: false }));
         }
-    }
+    };
+    const deleteFile = () =>{
+        if(!file) return;
+        Swal.fire({
+            text: '이미지를 삭제하시겠습니까?',
+            showCancelButton: true,
+            background: 'black',
+            color: 'white',
+            confirmButtonText: '예', 
+            cancelButtonText: '아니오',
+            confirmButtonColor: 'tomato',
+            cancelButtonColor: '#1d9bf0',
+        }).then((result) => {
+            if (result.isConfirmed) {
+              setFile(null);
+              setFilePreview(null);
+            }
+          });
+    };
     return(
          /* htmlFor: 동일한 이름을 가진 ID와 연결 */
         <Form onSubmit={onSubmit}>
             <TextArea rows={5} maxLength={180} onChange={onChange} value={tweet} placeholder="글을 작성하세요" required/>
             <AttachFileButton $hasFile={!file} htmlFor="file">{file ? `Photo added` : "Add photo"}</AttachFileButton>
             <AttachFileInput onChange={onFileChange} type="file" id="file" accept="image/*"/>
-            {file && <File>{file?.name}<DelDiv onClick={delFile}><SvgIcon name="delete"/></DelDiv></File>}
-            {filePreview && <img src={filePreview} alt="Preview" style={{ width: "100%", marginTop: "10px" }} />}
+            {filePreview && 
+                <FileForm>
+                    <CloseButton onClick={deleteFile}><SvgIcon name="close"/></CloseButton>
+                    <Img src={filePreview} alt="Preview"/>
+                </FileForm>
+            }
             <SubmitBtn type="submit" value={isLoading ? "포스팅중...":"작성"}/>
         </Form>
     )

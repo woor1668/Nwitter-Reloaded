@@ -12,12 +12,14 @@
     "deploy": "firebase deploy"
   },
   "dependencies": {
+    "@sweetalert2/theme-dark": "^5.0.17",
     "firebase": "^10.1.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.14.2",
     "styled-components": "^6.0.7",
-    "styled-reset": "^4.5.2"
+    "styled-reset": "^4.5.2",
+    "sweetalert2": "^11.12.3"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",
