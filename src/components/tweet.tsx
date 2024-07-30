@@ -1,7 +1,7 @@
 import styled from "styled-components";
 import { ITweet } from "./timeline";
 import { auth, db, storage } from "../firebase";
-import { deleteDoc, doc, updateDoc } from "firebase/firestore";
+import { deleteDoc, doc } from "firebase/firestore";
 import { deleteObject, getDownloadURL, ref } from "firebase/storage";
 import { useEffect, useRef, useState, useCallback } from "react";
 import SvgIcon from "./svg";
@@ -78,6 +78,7 @@ const Photo = styled.img`
   border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: 15px;
   max-width: 100%;
+  max-height: 516px;
 `;
 
 interface TweetProps extends ITweet {}

@@ -5,6 +5,7 @@ import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { Form, TextArea, AttachFileButton, AttachFileInput, SubmitBtn, CloseButton, FileForm, Img } from "./filecss";
 import SvgIcon from "./svg";
 import Swal from "sweetalert2";
+import "../css/dark-theme.css";
 
 export default function PostTweetForm(){
     const [state, setState] = useState({ isLoading: false, tweet: ""});
@@ -50,6 +51,7 @@ export default function PostTweetForm(){
             }
             setState({...state, tweet: ""});
             setFile(null);
+            setFilePreview(null);
         } catch (e) {
             
         }finally{
@@ -67,6 +69,10 @@ export default function PostTweetForm(){
             cancelButtonText: '아니오',
             confirmButtonColor: 'tomato',
             cancelButtonColor: '#1d9bf0',
+            customClass: {
+                container: 'main',
+                popup : 'dark-theme'
+            }
         }).then((result) => {
             if (result.isConfirmed) {
               setFile(null);

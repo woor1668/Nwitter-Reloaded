@@ -1,6 +1,9 @@
 import styled from "styled-components";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Form, TextArea, AttachFileButton, AttachFileInput, CloseButton, Img, FileForm } from "./filecss";
+import SvgIcon from "./svg";
+import Swal from "sweetalert2";
+import "../css/dark-theme.css";
 
 const SaveButton = styled.button`
     background: #1da1f2;
@@ -33,27 +36,45 @@ const ModalContent: React.FC<rePostTweetProps> = ({ initialContent, initialFileU
         setFilePreview(null);
         }
     };
-    const delFile = () =>{
-        if(confirm("파일을 삭제하시겠습니까?")){
+    const deleteFile = () =>{
+      if(!file) return;
+      Swal.fire({
+          text: '이미지를 삭제하시겠습니까?',
+          showCancelButton: true,
+          background: 'black',
+          color: 'white',
+          confirmButtonText: '예', 
+          cancelButtonText: '아니오',
+          confirmButtonColor: 'tomato',
+          cancelButtonColor: '#1d9bf0',
+          customClass: {
+              container: 'main',
+              popup : 'dark-theme'
+          }
+      }).then((result) => {
+          if (result.isConfirmed) {
             setFile(null);
             setFilePreview(null);
-        }
-    };
+          }
+        });
+  };
     const handleSave = () => {
       onSave(content, file || undefined);
     };
-
+  useEffect(()=>{
+    console.log(filePreview)
+  },[])
   return (
     <Form>
         <TextArea value={content} onChange={(e) => setContent(e.target.value)} rows={5}/>
         <AttachFileButton $hasFile={!filePreview} htmlFor="reFile">{filePreview ? `Photo added` : "Add photo"}</AttachFileButton>
         <AttachFileInput onChange={handleFileChange} type="file" id="reFile" accept="image/*"/>
         {filePreview && 
-            <FileForm>
-                <CloseButton onClick={delFile}>×</CloseButton>
-                <Img src={filePreview} alt="Preview"/>
-            </FileForm>
-        }
+                <FileForm>
+                    <CloseButton onClick={deleteFile}><SvgIcon name="close"/></CloseButton>
+                    <Img src={filePreview} alt="Preview"/>
+                </FileForm>
+            }
       <SaveButton onClick={handleSave}>Save</SaveButton>
     </Form>
   );
