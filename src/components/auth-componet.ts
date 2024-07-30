@@ -64,3 +64,15 @@ export const GitButton = styled.span`
 export const GitLogo = styled.img`
     height: 25px;
 `;
+
+export const Password = styled.div`
+    position: relative;
+    svg{
+        top: 10px;
+        right: 10px;
+        position: absolute;
+        z-index: 1000;
+        fill: black;
+    }
+`;
+export const Psp = styled.p``;
