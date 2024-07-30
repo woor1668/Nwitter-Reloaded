@@ -1,9 +1,5 @@
 import styled from "styled-components";
 
-interface closeProps{
-    
-}
-
 export const Form = styled.form`
     display: flex;
     flex-direction: column;
@@ -76,6 +72,7 @@ export const CloseButton = styled.div`
 export const Img = styled.img`
     width: 100%; 
     max-height: 450px;
+    border-radius: 15px;
 `;
 export const SubmitBtn = styled.input`
     background-color: #1d9bf0;

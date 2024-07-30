@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { useEffect, useState } from "react";
+import { useRef, useState } from "react";
 import { Form, TextArea, AttachFileButton, AttachFileInput, CloseButton, Img, FileForm } from "./filecss";
 import SvgIcon from "./svg";
 import Swal from "sweetalert2";
@@ -16,28 +16,38 @@ const SaveButton = styled.button`
 
 interface rePostTweetProps {
   initialContent: string;
-  initialFileUrl: string | null; // URL for an existing file
-  onSave: (newContent: string, file?: File) => void;
+  initialFileUrl: string | undefined;
+  onSave: (newContent: string, file?: File, isDelete?: boolean) => void;
 }
 
 const ModalContent: React.FC<rePostTweetProps> = ({ initialContent, initialFileUrl, onSave }) => {
     const [content, setContent] = useState(initialContent);
-    const [file, setFile] = useState<File | null>();
-    const [filePreview, setFilePreview] = useState<string | null>(initialFileUrl);
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const newFile = event.target.files?.[0] || null;
-        setFile(newFile);
-        if (newFile) {
-        const reader = new FileReader();
-        reader.onloadend = () => setFilePreview(reader.result as string);
-        reader.readAsDataURL(newFile);
+    const [reFile, setreFile] = useState<File | null>(null);
+    const [filePreview, setFilePreview] = useState<string | undefined>(initialFileUrl);
+    const [toDelete, setDelete] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const {files} = e.target;
+        if(files && files?.length === 1){
+            if(files[0].size / (1024 * 1024) >= 1){
+              setreFile(null);
+                setFilePreview(undefined);
+                return alert("파일 크기가 1MB 이상입니다. 다른 파일을 선택하세요.");
+            }
+            const reader = new FileReader();
+            reader.onloadend = () => setFilePreview(reader.result as string);
+            reader.readAsDataURL(files[0]);
+            setreFile(files[0]);
+            setDelete(false);
         } else {
-        setFile(null);
-        setFilePreview(null);
+        setreFile(null);
+        setFilePreview(undefined);
         }
     };
+
     const deleteFile = () =>{
-      if(!file) return;
+      if(!filePreview) return;
       Swal.fire({
           text: '이미지를 삭제하시겠습니까?',
           showCancelButton: true,
@@ -53,22 +63,24 @@ const ModalContent: React.FC<rePostTweetProps> = ({ initialContent, initialFileU
           }
       }).then((result) => {
           if (result.isConfirmed) {
-            setFile(null);
-            setFilePreview(null);
+            setreFile(null);
+            setFilePreview(undefined);
+            setDelete(true);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = "";
+            }
           }
         });
   };
-    const handleSave = () => {
-      onSave(content, file || undefined);
-    };
-  useEffect(()=>{
-    console.log(filePreview)
-  },[])
+
+  const handleSave = () => {
+      onSave(content, reFile || undefined, toDelete);
+   };
   return (
     <Form>
         <TextArea value={content} onChange={(e) => setContent(e.target.value)} rows={5}/>
         <AttachFileButton $hasFile={!filePreview} htmlFor="reFile">{filePreview ? `Photo added` : "Add photo"}</AttachFileButton>
-        <AttachFileInput onChange={handleFileChange} type="file" id="reFile" accept="image/*"/>
+        <AttachFileInput onChange={handleFileChange} type="file" ref={fileInputRef} id="reFile" accept="image/*"/>
         {filePreview && 
                 <FileForm>
                     <CloseButton onClick={deleteFile}><SvgIcon name="close"/></CloseButton>

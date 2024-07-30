@@ -1,5 +1,5 @@
 import { addDoc, collection, updateDoc } from "firebase/firestore";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { auth, db, storage } from "../firebase";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { Form, TextArea, AttachFileButton, AttachFileInput, SubmitBtn, CloseButton, FileForm, Img } from "./filecss";
@@ -12,6 +12,7 @@ export default function PostTweetForm(){
     const [file, setFile] = useState<File|null>(null);
     const {isLoading, tweet} = state
     const [filePreview, setFilePreview] = useState<string | null>();
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const onChange = (e: React.ChangeEvent<HTMLTextAreaElement>)=>{
         setState({...state, tweet: e.target.value});
     };
@@ -77,6 +78,9 @@ export default function PostTweetForm(){
             if (result.isConfirmed) {
               setFile(null);
               setFilePreview(null);
+              if (fileInputRef.current) {
+                  fileInputRef.current.value = "";
+              }
             }
           });
     };
@@ -85,7 +89,7 @@ export default function PostTweetForm(){
         <Form onSubmit={onSubmit}>
             <TextArea rows={5} maxLength={180} onChange={onChange} value={tweet} placeholder="글을 작성하세요" required/>
             <AttachFileButton $hasFile={!file} htmlFor="file">{file ? `Photo added` : "Add photo"}</AttachFileButton>
-            <AttachFileInput onChange={onFileChange} type="file" id="file" accept="image/*"/>
+            <AttachFileInput onChange={onFileChange} ref={fileInputRef} type="file" id="file" accept="image/*"/>
             {filePreview && 
                 <FileForm>
                     <CloseButton onClick={deleteFile}><SvgIcon name="close"/></CloseButton>

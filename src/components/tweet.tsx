@@ -1,8 +1,8 @@
 import styled from "styled-components";
 import { ITweet } from "./timeline";
 import { auth, db, storage } from "../firebase";
-import { deleteDoc, doc } from "firebase/firestore";
-import { deleteObject, getDownloadURL, ref } from "firebase/storage";
+import { deleteDoc, doc, updateDoc } from "firebase/firestore";
+import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { useEffect, useRef, useState, useCallback } from "react";
 import SvgIcon from "./svg";
 import Dropdown from "./dropdown";
@@ -100,11 +100,12 @@ export default function Tweet({
     showDropdown: false,
     isModalOpen: false,
     modalContent: tweet,
-    modalFileUrl: photo_url as string | null
+    modalFileUrl: photo_url as string | null,
+    tweetId: id
   });
 
-  const { isLoading, avatarUrl, showDropdown, isModalOpen, modalContent, modalFileUrl  } = state;
-
+  const { isLoading, avatarUrl, showDropdown, isModalOpen, modalContent, tweetId } = state;
+//프로필 이미지 가져오기
   useEffect(() => {
     const fetchAvatar = async () => {
       try {
@@ -120,10 +121,9 @@ export default function Tweet({
         setState(prevState => ({ ...prevState, avatarUrl: null })); // Fallback to default avatar
       }
     };
-
     fetchAvatar();
   }, [userId]);
-
+//트윗 삭제
   const onDelete = useCallback(async () => {
     setState(prevState => ({ ...prevState, showDropdown: false }));
     if (confirm("트윗을 삭제하시겠습니까?") && user?.uid === userId && !isLoading) {
@@ -141,28 +141,56 @@ export default function Tweet({
       }
     }
   }, [user?.uid, userId, isLoading, id, photo_url]);
-
+///트윗 수정
   const onEdit = useCallback(() => {
     setState(prevState => ({ ...prevState, isModalOpen: true, showDropdown: false }));
   }, []);
-
-  const handleMorDivClick = useCallback((event: React.MouseEvent) => {
-    event.stopPropagation(); // Prevent click from closing dropdown
-    setState(prevState => ({ ...prevState, showDropdown: !prevState.showDropdown }));
-  }, []);
-
-  const reConentSave = useCallback((newContent: string, newFile?: File) => {
-    // Handle save logic here
-    console.log('New content:', newContent);
-    console.log('New file:', newFile);
+//트윗 수정 콜백
+  const reConentSave = useCallback(async (newContent: string, newFile?: File, isDelete?: boolean) => {
     setState(prevState => ({
-      ...prevState,
-      isModalOpen: false,
-      modalContent: newContent,
-      modalFileUrl: newFile ? URL.createObjectURL(newFile) : modalFileUrl,
+        ...prevState,
+        isModalOpen: false,
+        modalContent: newContent,
+        modalFileUrl: newFile ? URL.createObjectURL(newFile) : prevState.modalFileUrl,
     }));
-  }, [modalFileUrl]);
-
+    try {
+        const tweetRef = doc(db, "tweets", tweetId); // state에 tweetId가 있다고 가정
+        console.log(newContent);
+        await updateDoc(tweetRef, {
+            tweet: newContent,
+            updatedAt: Date.now()
+        });
+        const locationRef = ref(storage, `tweets/${user?.uid}/${tweetId}`);
+        if(isDelete){  
+          console.log(`tweets/${user?.uid}/${tweetId}`);
+          await deleteObject(locationRef);
+          await updateDoc(tweetRef, {
+            photo_url: ""
+        });
+        }else{
+          if (newFile) {
+              const result = await uploadBytes(locationRef, newFile);
+              const url = await getDownloadURL(result.ref);
+              await updateDoc(tweetRef, {
+                  photo_url: url
+              });
+        }
+        }
+    } catch (e) {
+        console.error("Error updating document: ", e);
+    }
+}, [tweetId]);
+//드롭다운 이벤트
+const handleMorDivClick = useCallback((event: React.MouseEvent) => {
+  event.stopPropagation();
+  setState(prevState => ({ ...prevState, showDropdown: !prevState.showDropdown }));
+}, []);
+//드롭다운 옵션
+const options = [
+  { label: 'Delete', onClick: onDelete },
+  { label: 'Edit', onClick: onEdit }
+];
+  //드롭다운 닫기 이벤트
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (morDivRef.current && !morDivRef.current.contains(event.target as Node) 
@@ -175,12 +203,6 @@ export default function Tweet({
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
-
-  const options = [
-    { label: 'Delete', onClick: onDelete },
-    { label: 'Edit', onClick: onEdit }
-  ];
-
   return (
     <Wrapper>
       <Column>
@@ -213,7 +235,7 @@ export default function Tweet({
       <Modal isOpen={isModalOpen} onClose={() => setState(prevState => ({ ...prevState, isModalOpen: false }))}>
         <RePostTweetForm
           initialContent={modalContent}
-          initialFileUrl={modalFileUrl}
+          initialFileUrl={photo_url}
           onSave={reConentSave}
         />
       </Modal>
