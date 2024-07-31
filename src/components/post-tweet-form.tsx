@@ -16,7 +16,7 @@ export default function PostTweetForm() {
     const [timeLimit, setTimeLimit] = useState(false);
 
     useEffect(() => {
-        if (postTimes.length >= 5) {
+        if (postTimes.length >= 7) {
             const now = Date.now();
             const thirtySecondsAgo = now - 30000;
 
@@ -77,7 +77,7 @@ export default function PostTweetForm() {
             setState({ ...state, tweet: "" });
             setFile(null);
             setFilePreview(null);
-            setPostTimes([...postTimes, Date.now()].slice(-5));
+            setPostTimes([...postTimes, Date.now()].slice(-7));
         } catch (e) {
             // Handle error here
         } finally {
