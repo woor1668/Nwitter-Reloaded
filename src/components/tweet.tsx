@@ -3,18 +3,18 @@ import { ITweet } from "./timeline";
 import { auth, db, storage } from "../firebase";
 import { deleteDoc, doc, updateDoc } from "firebase/firestore";
 import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { useEffect, useRef, useState, useCallback, useId } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import SvgIcon from "./svg";
 import Dropdown from "./dropdown";
 import { FirebaseError } from "firebase/app";
 import Modal from "./modal";
 import RePostTweetForm from "./re-post-tweet-form";
-import { confirmBox } from "./commonBox";
+import { alretBox, confirmBox } from "./commonBox";
 
 const Wrapper = styled.div`
   display: grid;    
   grid-template-columns: 1.2cm 1fr;
-  padding: 20px;
+  padding: 20px 20px 10px 20px;
   border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: 15px;
 `;
@@ -85,6 +85,34 @@ const Photo = styled.img`
   max-width: 100%;
   max-height: 516px;
 `;
+const Foopter = styled.div`
+    margin-left: 30px;
+    display: flex;
+    justify-content: space-around; /* Adjust spacing between items */
+    align-items: center; /* Optional: background color for visibility */
+    padding: 10px; /* Optional: padding for overall space */
+    border-radius: 8px; /* Optional: rounded corners */
+`;
+
+const Span = styled.span`
+    display: flex;
+    align-items: center;
+    font-size: 11px; /* Adjust as needed */
+    cursor: pointer; /* Change cursor to pointer to indicate clickability */
+    transition: color 0.3s ease; /* Smooth color transition on hover */
+    margin-right: 10px;
+    svg {
+        fill: rgba(255,255,255,0.8);
+        margin-right: 8px; /* Space between icon and text */
+        &:hover {
+            fill: #1d9bf0; /* Color on hover */
+        }
+    }
+`;
+
+const ChatSpan = styled(Span)``;
+const UpSpan = styled(Span)``;
+const DownSpan = styled(Span)``;
 
 interface TweetProps extends ITweet {}
 
@@ -197,18 +225,28 @@ const options = [
   { label: 'Edit', onClick: onEdit }
 ];
   //드롭다운 닫기 이벤트
-  useEffect(() => {
+useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (morDivRef.current && !morDivRef.current.contains(event.target as Node) 
+        if (morDivRef.current && !morDivRef.current.contains(event.target as Node) 
         && dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setState(prevState => ({ ...prevState, showDropdown: false }));
-      }
+            setState(prevState => ({ ...prevState, showDropdown: false }));
+        }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+        document.removeEventListener("mousedown", handleClickOutside);
+};
   }, []);
+
+  const clickChat = () =>{
+    alretBox("되는 줄 알았지");
+  }
+  const clickUp = () =>{
+    alretBox("사실 안됨");
+  }
+  const clickDown = () =>{
+    alretBox("이것도");
+  }
   return (
     <Wrapper>
       <Column>
@@ -245,6 +283,11 @@ const options = [
           onSave={reConentSave}
         />
       </Modal>
+        <Foopter>
+            <ChatSpan onClick={clickChat}><SvgIcon name="chat"/> 0</ChatSpan>
+            <UpSpan onClick={clickUp}><SvgIcon name="up_finger"/> 0</UpSpan>
+            <DownSpan onClick={clickDown}><SvgIcon name="down_finger"/> 0</DownSpan>
+      </Foopter>
     </Wrapper>
   );
 }
