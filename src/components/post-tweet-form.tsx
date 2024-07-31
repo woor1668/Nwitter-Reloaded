@@ -59,6 +59,17 @@ export default function PostTweetForm(){
             setState((prevState) => ({ ...prevState, isLoading: false }));
         }
     };
+    const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if (tweet.trim()) {
+                // Create a synthetic submit event to trigger onSubmit
+                const syntheticEvent = new Event('submit', { bubbles: true, cancelable: true });
+                (e.target as HTMLTextAreaElement).closest('form')?.dispatchEvent(syntheticEvent);
+            }
+        }
+    };
+
     const deleteFile = () =>{
         if(!file) return;
         Swal.fire({
@@ -87,7 +98,7 @@ export default function PostTweetForm(){
     return(
          /* htmlFor: 동일한 이름을 가진 ID와 연결 */
         <Form onSubmit={onSubmit}>
-            <TextArea rows={5} maxLength={180} onChange={onChange} value={tweet} placeholder="글을 작성하세요" required/>
+            <TextArea rows={5} maxLength={180} onChange={onChange} value={tweet}  onKeyDown={onKeyDown} placeholder="글을 작성하세요(줄바꾸기 shift+enter)" required/>
             <AttachFileButton $hasFile={!file} htmlFor="file">{file ? `Photo added` : "Add photo"}</AttachFileButton>
             <AttachFileInput onChange={onFileChange} ref={fileInputRef} type="file" id="file" accept="image/*"/>
             {filePreview && 
