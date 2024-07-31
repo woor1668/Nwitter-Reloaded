@@ -1,12 +1,13 @@
-import styled from "styled-components";
+import styled, { css } from "styled-components";
 import { auth, db, storage } from "../firebase";
 import { useEffect, useRef, useState } from "react";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { Unsubscribe, updateProfile } from "firebase/auth";
-import { collection, limit, onSnapshot, orderBy, query, where } from "firebase/firestore";
+import { updateProfile } from "firebase/auth";
+import { collection, DocumentData, limit, onSnapshot, orderBy, query, QueryDocumentSnapshot, startAfter, where } from "firebase/firestore";
 import Tweet from "../components/tweet";
 import { ITweet } from "../components/timeline";
 import SvgIcon from "../components/svg";
+import { slideInFromTop, slideOutToTop } from "../css/animation";
 
 const Wrapper = styled.div`
     display: flex;
@@ -44,8 +45,6 @@ const NameDiv = styled.div`
 const SvgSpan = styled.span`
    
 `;
-
-
 const Name = styled.input<{ $isEditable: boolean }>`
     background-color: transparent;
     border: none;
@@ -69,13 +68,49 @@ const Tweets = styled.div`
         background: none; /* Optional: hides scrollbar track */
     }
 `;
+const UpArrow = styled.div<{ $show: boolean }>`
+    display: ${({ $show }) => ($show ? 'flex' : 'none')};
+    justify-content: center;
+    align-items: center;
+    position: fixed;
+    background-color: rgba(29, 155, 240);
+    color: white;
+    border: 3px solid white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    z-index: 1000;
+    bottom: 60px;
+    right: 33%;
+    opacity: 0;
+    animation: ${({ $show }) =>
+        $show
+            ? css`${slideInFromTop} 0.8s ease-out forwards`
+            : css`${slideOutToTop} 0.8s ease-in forwards`};
+    svg {
+        width: 25px;
+        height: 25px;
+        stroke: white;
+        stroke-width: 2;
+    }
+`
+
 export default function Profile(){
     const user = auth.currentUser;
     //const[avatar, setAvatar] = useState(user?.photoURL);
-    const [tweets, setTweet] = useState<ITweet[]>([]);
-    const [state, setState] = useState({avatar: user?.photoURL, name: `${user?.displayName ?? "Anonymous"}`, isEdit: false});
-    const { avatar, name, isEdit } = state;
+    const [tweets, setTweets] = useState<ITweet[]>([]);
+    const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+    const [state, setState] = useState({
+        avatar: user?.photoURL, 
+        name: `${user?.displayName ?? "Anonymous"}`,
+        loading: false,
+        isEdit: false,
+        isScroll: false,
+        showUpArrow: false
+        });
+    const { avatar, name, isEdit, isScroll, showUpArrow, loading } = state;
     const nameRef = useRef<HTMLInputElement>(null);
+    const wrapperRef = useRef<HTMLDivElement>(null);
     const prevNameRef = useRef(name);
 
     const onAvatarChange =  async(e:React.ChangeEvent<HTMLInputElement>) =>{
@@ -103,45 +138,107 @@ export default function Profile(){
         }
         setState((prevState) => ({ ...prevState, isEdit: !prevState.isEdit }));
     };
-
     const onChangeName = (e: React.ChangeEvent<HTMLInputElement>) => {
         setState((prevState) => ({ ...prevState, name: e.target.value }));
     };
-
-    useEffect(()=> {
-        let unsubscribe : Unsubscribe | null = null;
-        const fetchTweets = async() =>{
-            const tweetQuery = query(
-                collection(db,"tweets"),
-                where("userId","==",user?.uid),
-                orderBy("createdAt", "desc"),
-                limit(25)
-            );
-            
-        unsubscribe = await onSnapshot(tweetQuery, (snapshot) => {
-            const tweets = snapshot.docs.map((doc)=>{
-                const {createdAt, photo_url, tweet, userId, userNm} = doc.data();
-                return{
-                    id: doc.id,
-                    createdAt, photo_url, tweet, userId, userNm
-                };
-            })
-            setTweet(tweets);
-        });
-    };
-        fetchTweets()
-        return() =>{
-            unsubscribe && unsubscribe();
-        }
-    },[]);
     useEffect(() => {
         if (isEdit && nameRef.current) {
             nameRef.current.focus();
         }
     }, [isEdit]);
 
+    const fetchTweets = () => {
+        setState(prevState => ({ ...prevState, loading: true }));
+        const tweetQuery = query(
+            collection(db, "tweets"),
+            where("userId","==",user?.uid),
+            orderBy("createdAt", "desc"),
+            limit(25)
+        );
+
+        const unsubscribe = onSnapshot(tweetQuery, (snapshot) => {
+            if (!snapshot.empty) {
+                const newTweets = snapshot.docs.map((doc) => {
+                    const { createdAt, photo_url, tweet, userId, userNm } = doc.data();
+                    return {
+                        id: doc.id,
+                        createdAt,
+                        photo_url,
+                        tweet,
+                        userId,
+                        userNm
+                    };
+                });
+                setTweets(newTweets);
+                setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+            }
+            setState(prevState => ({ ...prevState, loading: false, isScroll: false }));
+        });
+
+        return unsubscribe;
+    };
+
+    const fetchMoreTweets = () => {
+        if (loading || !lastVisible) return;
+        setState(prevState => ({ ...prevState, loading: true }));
+        const tweetQuery = query(
+            collection(db, "tweets"),
+            where("userId","==",user?.uid),
+            orderBy("createdAt", "desc"),
+            startAfter(lastVisible),
+            limit(25)
+        );
+
+        const unsubscribe = onSnapshot(tweetQuery, (snapshot) => {
+            if (!snapshot.empty) {
+                const newTweets = snapshot.docs.map((doc) => {
+                    const { createdAt, photo_url, tweet, userId, userNm } = doc.data();
+                    return {
+                        id: doc.id,
+                        createdAt,
+                        photo_url,
+                        tweet,
+                        userId,
+                        userNm
+                    };
+                });
+                setTweets((prevTweets) => [...prevTweets, ...newTweets]);
+                setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+            }
+            setState(prevState => ({ ...prevState, loading: false }));
+        });
+
+        return unsubscribe;
+    };
+    useEffect(() => {
+        const unsubscribe = fetchTweets();
+        
+        return () => {
+            if (unsubscribe) {
+                unsubscribe();
+            }
+        };
+    }, []);
+    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+        setState(prevState => ({
+            ...prevState,
+            showUpArrow: scrollTop > 10
+        }));
+        if (scrollHeight - scrollTop <= clientHeight + 100 && scrollHeight - scrollTop >= clientHeight) {
+            if(!isScroll){
+                setState(prevState => ({ ...prevState, isScroll: true }));
+                fetchMoreTweets();
+            }
+        }
+    };
+    const scrollToTop = () => {
+        if (wrapperRef.current) {
+            wrapperRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
     return( 
-    <Wrapper>
+    <Wrapper rel="wrapperRef" onScroll={handleScroll}>
         <AvatarUpload htmlFor="avatar" title="이미지 올리기">
             {avatar ? <AvatarImg src={avatar}/> : <SvgIcon name="user" />}
         </AvatarUpload>
@@ -161,6 +258,9 @@ export default function Profile(){
             <Tweets>
                 {tweets.map(tweet => <Tweet key={tweet.id}{...tweet} />)}
             </Tweets>
+            <UpArrow $show={showUpArrow} onClick={scrollToTop}>
+                <SvgIcon name="up_arrow"/>
+            </UpArrow>
     </Wrapper>
     )
 }

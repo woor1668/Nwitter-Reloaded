@@ -1,8 +1,10 @@
 import { collection, DocumentData, limit, onSnapshot, orderBy, query, QueryDocumentSnapshot, startAfter } from "firebase/firestore";
-import { useEffect, useState } from "react";
-import styled from "styled-components"
+import { useEffect, useRef, useState } from "react";
+import styled, { css } from "styled-components"
 import { db } from "../firebase";
 import Tweet from "./tweet";
+import SvgIcon from "./svg";
+import { slideInFromTop, slideOutToTop } from "../css/animation";
 
 export interface ITweet {
     id: string;
@@ -12,8 +14,8 @@ export interface ITweet {
     userId: string;
     userNm: string;
 }
-
 const Wrapper = styled.div`
+    position: relative;
     display: flex;
     gap: 10px;
     flex-direction: column;
@@ -26,12 +28,43 @@ const Wrapper = styled.div`
     }
 `
 ;
-
+const UpArrow = styled.div<{ $show: boolean }>`
+    display: ${({ $show }) => ($show ? 'flex' : 'none')};
+    justify-content: center;
+    align-items: center;
+    position: fixed;
+    background-color: rgba(29, 155, 240);
+    color: white;
+    border: 3px solid white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    z-index: 1000;
+    bottom: 60px;
+    right: 33%;
+    opacity: 0;
+    animation: ${({ $show }) =>
+        $show
+            ? css`${slideInFromTop} 0.8s ease-out forwards`
+            : css`${slideOutToTop} 0.8s ease-in forwards`};
+    svg {
+        width: 25px;
+        height: 25px;
+        stroke: white;
+        stroke-width: 2;
+    }
+`
 export default function Timeline(){
     const [tweets, setTweets] = useState<ITweet[]>([]);
     const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [isScroll, setScroll] = useState(false);
+    const wrapperRef = useRef<HTMLDivElement>(null);
+    const [state, setState] = useState({
+        loading: false,
+        isScroll: false,
+        showUpArrow: false
+      });
+
+    const { loading, isScroll, showUpArrow } = state;
     //select문
         /*const snapshot = await getDocs(tweetQuery);
         const tweets = snapshot.docs.map((doc)=>{
@@ -44,7 +77,7 @@ export default function Timeline(){
 
     //실시간 select문
     const fetchTweets = () => {
-        setLoading(true);
+        setState(prevState => ({ ...prevState, loading: true }));
         const tweetQuery = query(
             collection(db, "tweets"),
             orderBy("createdAt", "desc"),
@@ -67,8 +100,7 @@ export default function Timeline(){
                 setTweets(newTweets);
                 setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
             }
-            setLoading(false);
-            setScroll(false);
+            setState(prevState => ({ ...prevState, loading: false, isScroll: false }));
         });
 
         return unsubscribe;
@@ -76,7 +108,7 @@ export default function Timeline(){
 
     const fetchMoreTweets = () => {
         if (loading || !lastVisible) return;
-        setLoading(true);
+        setState(prevState => ({ ...prevState, loading: true }));
         const tweetQuery = query(
             collection(db, "tweets"),
             orderBy("createdAt", "desc"),
@@ -100,7 +132,7 @@ export default function Timeline(){
                 setTweets((prevTweets) => [...prevTweets, ...newTweets]);
                 setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
             }
-            setLoading(false);
+            setState(prevState => ({ ...prevState, loading: false }));
         });
 
         return unsubscribe;
@@ -118,20 +150,31 @@ export default function Timeline(){
 
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
         const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+        setState(prevState => ({
+            ...prevState,
+            showUpArrow: scrollTop > 300
+        }));
         if (scrollHeight - scrollTop <= clientHeight + 100 && scrollHeight - scrollTop >= clientHeight) {
             if(!isScroll){
-                setScroll(true);
+                setState(prevState => ({ ...prevState, isScroll: true }));
                 fetchMoreTweets();
             }
         }
     };
-
+    const scrollToTop = () => {
+        if (wrapperRef.current) {
+            wrapperRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
     return (
-        <Wrapper onScroll={handleScroll}>
+        <Wrapper onScroll={handleScroll} ref={wrapperRef}>
             {tweets.map((tweet) => (
                 <Tweet key={tweet.id} {...tweet} />
             ))}
             {loading && <div>Loading...</div>}
+            <UpArrow $show={showUpArrow} onClick={scrollToTop}>
+                <SvgIcon name="up_arrow"/>
+            </UpArrow>
         </Wrapper>
     );
 }
