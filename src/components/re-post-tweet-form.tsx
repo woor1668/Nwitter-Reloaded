@@ -2,8 +2,7 @@ import styled from "styled-components";
 import { useRef, useState } from "react";
 import { Form, TextArea, AttachFileButton, AttachFileInput, CloseButton, Img, FileForm } from "./filecss";
 import SvgIcon from "./svg";
-import Swal from "sweetalert2";
-import "../css/dark-theme.css";
+import { alretBox, confirmBox } from "./commonBox";
 
 const SaveButton = styled.button`
     background: #1da1f2;
@@ -33,7 +32,10 @@ const ModalContent: React.FC<rePostTweetProps> = ({ initialContent, initialFileU
             if(files[0].size / (1024 * 1024) >= 1){
               setreFile(null);
                 setFilePreview(undefined);
-                return alert("파일 크기가 1MB 이상입니다. 다른 파일을 선택하세요.");
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = "";
+                }
+                return alretBox('파일 크기가 1MB 이상입니다.\n다른 파일을 선택하세요.');
             }
             const reader = new FileReader();
             reader.onloadend = () => setFilePreview(reader.result as string);
@@ -46,31 +48,17 @@ const ModalContent: React.FC<rePostTweetProps> = ({ initialContent, initialFileU
         }
     };
 
-    const deleteFile = () =>{
+    const deleteFile = async() =>{
       if(!filePreview) return;
-      Swal.fire({
-          text: '이미지를 삭제하시겠습니까?',
-          showCancelButton: true,
-          background: 'black',
-          color: 'white',
-          confirmButtonText: '예', 
-          cancelButtonText: '아니오',
-          confirmButtonColor: 'tomato',
-          cancelButtonColor: '#1d9bf0',
-          customClass: {
-              container: 'main',
-              popup : 'dark-theme'
-          }
-      }).then((result) => {
-          if (result.isConfirmed) {
-            setreFile(null);
-            setFilePreview(undefined);
-            setDelete(true);
-            if (fileInputRef.current) {
-                fileInputRef.current.value = "";
-            }
-          }
-        });
+      const result = await confirmBox('정말로 파일을 삭제하시겠습니까?');
+      if (result.isConfirmed) {
+        setreFile(null);
+        setFilePreview(undefined);
+        setDelete(true);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
+     }
   };
 
   const handleSave = () => {

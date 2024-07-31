@@ -3,12 +3,13 @@ import { ITweet } from "./timeline";
 import { auth, db, storage } from "../firebase";
 import { deleteDoc, doc, updateDoc } from "firebase/firestore";
 import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useId } from "react";
 import SvgIcon from "./svg";
 import Dropdown from "./dropdown";
 import { FirebaseError } from "firebase/app";
 import Modal from "./modal";
 import RePostTweetForm from "./re-post-tweet-form";
+import { confirmBox } from "./commonBox";
 
 const Wrapper = styled.div`
   display: grid;    
@@ -52,7 +53,11 @@ const UserNm = styled.span`
   font-size: 16px;
   margin-right: 10px;
 `;
-
+const UserId  = styled.span`
+    font-weight: 200;
+    font-size: 14px;
+    color: gray;
+`;
 const MorDiv = styled.div`
   cursor: pointer;
   display: flex;
@@ -126,7 +131,8 @@ export default function Tweet({
 //트윗 삭제
   const onDelete = useCallback(async () => {
     setState(prevState => ({ ...prevState, showDropdown: false }));
-    if (confirm("트윗을 삭제하시겠습니까?") && user?.uid === userId && !isLoading) {
+    const result = await confirmBox("트윗을 삭제하시겠습니까?");
+    if (result.isConfirmed && user?.uid === userId && !isLoading) {
       try {
         setState(prevState => ({ ...prevState, isLoading: true }));
         await deleteDoc(doc(db, "tweets", id));
@@ -219,7 +225,7 @@ const options = [
       </Column>
       <Column>
         <Header>
-          <UserNm>{userNm}</UserNm>
+          <UserNm>{userNm}<UserId> @{userId.slice(0, 4)}</UserId></UserNm>
           {user?.uid === userId && (
             <MorDiv ref={morDivRef} onClick={handleMorDivClick}>
               <SvgIcon name="moreHor" />

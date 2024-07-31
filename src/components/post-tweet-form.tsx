@@ -4,8 +4,7 @@ import { auth, db, storage } from "../firebase";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { Form, TextArea, AttachFileButton, AttachFileInput, SubmitBtn, CloseButton, FileForm, Img } from "./filecss";
 import SvgIcon from "./svg";
-import Swal from "sweetalert2";
-import "../css/dark-theme.css";
+import { alretBox, confirmBox } from "./commonBox";
 
 export default function PostTweetForm() {
     const [state, setState] = useState({ isLoading: false, tweet: "" });
@@ -17,7 +16,7 @@ export default function PostTweetForm() {
     const [timeLimit, setTimeLimit] = useState(false);
 
     useEffect(() => {
-        if (postTimes.length >= 3) {
+        if (postTimes.length >= 5) {
             const now = Date.now();
             const thirtySecondsAgo = now - 30000;
 
@@ -42,7 +41,10 @@ export default function PostTweetForm() {
             if (files[0].size / (1024 * 1024) >= 1) {
                 setFile(null);
                 setFilePreview(null);
-                return alert("파일 크기가 1MB 이상입니다. 다른 파일을 선택하세요.");
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = "";
+                }
+                return alretBox('파일 크기가 1MB 이상입니다.\n다른 파일을 선택하세요.');
             }
             const reader = new FileReader();
             reader.onloadend = () => setFilePreview(reader.result as string);
@@ -75,7 +77,7 @@ export default function PostTweetForm() {
             setState({ ...state, tweet: "" });
             setFile(null);
             setFilePreview(null);
-            setPostTimes([...postTimes, Date.now()].slice(-3));
+            setPostTimes([...postTimes, Date.now()].slice(-5));
         } catch (e) {
             // Handle error here
         } finally {
@@ -93,30 +95,16 @@ export default function PostTweetForm() {
         }
     };
 
-    const deleteFile = () => {
+    const deleteFile = async() => {
         if (!file) return;
-        Swal.fire({
-            text: '이미지를 삭제하시겠습니까?',
-            showCancelButton: true,
-            background: 'black',
-            color: 'white',
-            confirmButtonText: '예',
-            cancelButtonText: '아니오',
-            confirmButtonColor: 'tomato',
-            cancelButtonColor: '#1d9bf0',
-            customClass: {
-                container: 'main',
-                popup: 'dark-theme'
+        const result = await confirmBox('정말로 파일을 삭제하시겠습니까?');
+        if (result.isConfirmed) {
+            setFile(null);
+            setFilePreview(null);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = "";
             }
-        }).then((result) => {
-            if (result.isConfirmed) {
-                setFile(null);
-                setFilePreview(null);
-                if (fileInputRef.current) {
-                    fileInputRef.current.value = "";
-                }
-            }
-        });
+        }
     };
 
     return (

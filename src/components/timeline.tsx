@@ -152,7 +152,7 @@ export default function Timeline(){
         const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
         setState(prevState => ({
             ...prevState,
-            showUpArrow: scrollTop > 300
+            showUpArrow: scrollTop > 150
         }));
         if (scrollHeight - scrollTop <= clientHeight + 100 && scrollHeight - scrollTop >= clientHeight) {
             if(!isScroll){

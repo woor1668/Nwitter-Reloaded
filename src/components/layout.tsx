@@ -2,6 +2,7 @@ import { Link, Outlet, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { auth } from "../firebase";
 import SvgIcon from "./svg";
+import { confirmBox } from "./commonBox";
 
 const Wrapper = styled.div`
     display: grid;
@@ -42,8 +43,8 @@ const MenuItem = styled.div`
 export default function Layout(){
     const navigate = useNavigate();
     const onLogout = async() => {
-        const ok = confirm("로그아웃 하시겠습니까?");
-        if(ok){
+        const result =await confirmBox("로그아웃 하시겠습니까?");
+        if (result.isConfirmed) {
             await auth.signOut();
             navigate("/login");
         }

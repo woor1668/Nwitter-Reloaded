@@ -8,6 +8,7 @@ import Tweet from "../components/tweet";
 import { ITweet } from "../components/timeline";
 import SvgIcon from "../components/svg";
 import { slideInFromTop, slideOutToTop } from "../css/animation";
+import { confirmBox } from "../components/commonBox";
 
 const Wrapper = styled.div`
     display: flex;
@@ -128,9 +129,10 @@ export default function Profile(){
             setState({ ...state, avatar: url });
         }
     };
-    const onClickEdit = () =>{
+    const onClickEdit = async() =>{
         if (isEdit && prevNameRef.current !== name) {
-            if (confirm("저장 하시겠습니까?")) {
+            const result = await confirmBox("저장 하시겠습니까?");
+            if (result.isConfirmed) {
                 updateProfile(user!, { displayName: name });
             } else {
                 setState((prevState) => ({ ...prevState, name: prevNameRef.current }));
