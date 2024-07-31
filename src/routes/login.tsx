@@ -59,7 +59,7 @@ export default function Login(){
                 <Password>
                     <Input onChange = {onChange} name="password" value={password} placeholder="password" type={isPass ? "text" : "password"} ref={pwdRef}/>
                     <Psp onClick={changePw}>
-                        <SvgIcon name="m_glass"/>
+                        <SvgIcon name={isPass ? "s_eye" : "eye"}/>
                     </Psp>
                 </Password>
                 <Input type="submit" value={isLoading ? "Loading..." : "로그인"}/>

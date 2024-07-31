@@ -58,7 +58,7 @@ export default function CreateAccount() {
                 <Password>
                     <Input onChange={onChange} name="password" value={password} placeholder="password" type={isPass ? "text" : "password"} />
                     <Psp onClick={changePw}>
-                        <SvgIcon name="m_glass"/>
+                        <SvgIcon name={isPass ? "s_eye" : "eye"}/>
                     </Psp>
                 </Password>
                 <Input type="submit" value={isLoading ? "Loading..." : "가입하기"} />

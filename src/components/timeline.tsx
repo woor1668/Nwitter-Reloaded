@@ -1,9 +1,8 @@
-import { collection, limit, onSnapshot, orderBy, query } from "firebase/firestore";
+import { collection, DocumentData, limit, onSnapshot, orderBy, query, QueryDocumentSnapshot, startAfter } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import styled from "styled-components"
 import { db } from "../firebase";
 import Tweet from "./tweet";
-import { Unsubscribe } from "firebase/auth";
 
 export interface ITweet {
     id: string;
@@ -29,7 +28,10 @@ const Wrapper = styled.div`
 ;
 
 export default function Timeline(){
-    const [tweets, setTweet] = useState<ITweet[]>([]);
+    const [tweets, setTweets] = useState<ITweet[]>([]);
+    const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [isScroll, setScroll] = useState(false);
     //select문
         /*const snapshot = await getDocs(tweetQuery);
         const tweets = snapshot.docs.map((doc)=>{
@@ -41,34 +43,95 @@ export default function Timeline(){
             });*/
 
     //실시간 select문
-    useEffect(()=> {
-        let unsubscribe : Unsubscribe | null = null;
-        const fetchTweets = async() =>{
-            const tweetQuery = query(
-                collection(db,"tweets"),
-                orderBy("createdAt", "desc"),
-                limit(25)
-            );
-            
-        unsubscribe = await onSnapshot(tweetQuery, (snapshot) => {
-            const tweets = snapshot.docs.map((doc)=>{
-                const {createdAt, photo_url, tweet, userId, userNm} = doc.data();
-                return{
-                    id: doc.id,
-                    createdAt, photo_url, tweet, userId, userNm
-                };
-            })
-            setTweet(tweets);
+    const fetchTweets = () => {
+        setLoading(true);
+        const tweetQuery = query(
+            collection(db, "tweets"),
+            orderBy("createdAt", "desc"),
+            limit(25)
+        );
+
+        const unsubscribe = onSnapshot(tweetQuery, (snapshot) => {
+            if (!snapshot.empty) {
+                const newTweets = snapshot.docs.map((doc) => {
+                    const { createdAt, photo_url, tweet, userId, userNm } = doc.data();
+                    return {
+                        id: doc.id,
+                        createdAt,
+                        photo_url,
+                        tweet,
+                        userId,
+                        userNm
+                    };
+                });
+                setTweets(newTweets);
+                setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+            }
+            setLoading(false);
+            setScroll(false);
         });
+
+        return unsubscribe;
     };
-        fetchTweets()
-        return() =>{
-            unsubscribe && unsubscribe();
+
+    const fetchMoreTweets = () => {
+        if (loading || !lastVisible) return;
+        setLoading(true);
+        const tweetQuery = query(
+            collection(db, "tweets"),
+            orderBy("createdAt", "desc"),
+            startAfter(lastVisible),
+            limit(25)
+        );
+
+        const unsubscribe = onSnapshot(tweetQuery, (snapshot) => {
+            if (!snapshot.empty) {
+                const newTweets = snapshot.docs.map((doc) => {
+                    const { createdAt, photo_url, tweet, userId, userNm } = doc.data();
+                    return {
+                        id: doc.id,
+                        createdAt,
+                        photo_url,
+                        tweet,
+                        userId,
+                        userNm
+                    };
+                });
+                setTweets((prevTweets) => [...prevTweets, ...newTweets]);
+                setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+            }
+            setLoading(false);
+        });
+
+        return unsubscribe;
+    };
+
+    useEffect(() => {
+        const unsubscribe = fetchTweets();
+        
+        return () => {
+            if (unsubscribe) {
+                unsubscribe();
+            }
+        };
+    }, []);
+
+    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+        if (scrollHeight - scrollTop <= clientHeight + 100 && scrollHeight - scrollTop >= clientHeight) {
+            if(!isScroll){
+                setScroll(true);
+                fetchMoreTweets();
+            }
         }
-    },[]);
-    return(
-        <Wrapper>
-            {tweets.map(tweet => <Tweet key={tweet.id}{...tweet} />)}            
+    };
+
+    return (
+        <Wrapper onScroll={handleScroll}>
+            {tweets.map((tweet) => (
+                <Tweet key={tweet.id} {...tweet} />
+            ))}
+            {loading && <div>Loading...</div>}
         </Wrapper>
-    )
+    );
 }
