@@ -20,7 +20,7 @@ const Wrapper = styled.div`
     flex-direction: column;
 `;
 
-const Timeline = forwardRef((props, ref) => {
+const Timeline = forwardRef((_, ref) => {
     const [tweets, setTweets] = useState<ITweet[]>([]);
     const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
     const [loading, setLoading] = useState(false);
