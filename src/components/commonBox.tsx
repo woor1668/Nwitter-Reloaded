@@ -4,7 +4,9 @@ import "../css/dark-theme.css";
 
 export const alretBox = (msg: string) => {
     return Swal.fire({
-        html: msg.replace(/\n/g, '<br>'),
+        html: msg.replace(/\n/g, '<br>')
+        .replace(/좋아요/g, '<span style="color: #1d9bf0;">좋아요</span>')
+        .replace(/싫어요/g, '<span style="color: #ff5a5f;">싫어요</span>'),
         text: msg,
         showCancelButton: true,
         showConfirmButton: false,
