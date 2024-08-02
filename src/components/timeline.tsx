@@ -1,5 +1,5 @@
 import { useImperativeHandle, forwardRef, useState, useCallback, useEffect } from 'react';
-import { collection, DocumentData, limit, onSnapshot, orderBy, query, QueryDocumentSnapshot, startAfter } from 'firebase/firestore';
+import { collection, DocumentData, limit, onSnapshot, orderBy, query, QueryDocumentSnapshot, startAfter, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import Tweet from './tweet';
 import styled from 'styled-components';
@@ -37,19 +37,16 @@ const Timeline = forwardRef((_, ref) => {
             limit(25)
         );
 
-        const unsubscribe = onSnapshot(tweetQuery, (snapshot) => {
+        const unsubscribe = onSnapshot(tweetQuery, async (snapshot) => {
             if (!snapshot.empty) {
-                const newTweets = snapshot.docs.map((doc) => {
-                    const { createdAt, photo_url, tweet, userId, userNm } = doc.data();
-                    return {
-                        id: doc.id,
-                        createdAt,
-                        photo_url,
-                        tweet,
-                        userId,
-                        userNm
-                    };
-                });
+                const newTweets = snapshot.docs.map((doc) => ({
+                    id: doc.id,
+                    createdAt: doc.data().createdAt,
+                    photo_url: doc.data().photo_url,
+                    tweet: doc.data().tweet,
+                    userId: doc.data().userId,
+                    userNm: doc.data().userNm
+                }));
                 setTweets(newTweets);
                 setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
             }
@@ -74,17 +71,14 @@ const Timeline = forwardRef((_, ref) => {
 
         const unsubscribe = onSnapshot(tweetQuery, (snapshot) => {
             if (!snapshot.empty) {
-                const newTweets = snapshot.docs.map((doc) => {
-                    const { createdAt, photo_url, tweet, userId, userNm } = doc.data();
-                    return {
-                        id: doc.id,
-                        createdAt,
-                        photo_url,
-                        tweet,
-                        userId,
-                        userNm
-                    };
-                });
+                const newTweets = snapshot.docs.map((doc) => ({
+                    id: doc.id,
+                    createdAt: doc.data().createdAt,
+                    photo_url: doc.data().photo_url,
+                    tweet: doc.data().tweet,
+                    userId: doc.data().userId,
+                    userNm: doc.data().userNm
+                }));
                 setTweets((prevTweets) => [...prevTweets, ...newTweets]);
                 setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
             }

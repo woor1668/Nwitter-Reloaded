@@ -1,3 +1,4 @@
+import React from "react";
 import styled from "styled-components"
 
 export const Svg = styled.svg`
@@ -8,6 +9,7 @@ export const Svg = styled.svg`
 `
 interface SvgProps {
     name: string;
+    style?: React.CSSProperties;
   }
 
 const icons: { [key: string]: JSX.Element } = {
@@ -97,9 +99,11 @@ const icons: { [key: string]: JSX.Element } = {
 
 };
   
-  export default function SvgIcon({ name }: SvgProps) {
+const SvgIcon: React.FC<SvgProps> = ({ name, style }) => {
     const icon = icons[name.toLowerCase()];
-    return icon ? icon : null;
-  }
+    return icon ? React.cloneElement(icon, { style }) : null;
+};
+
+export default SvgIcon;
 
 

@@ -1,7 +1,6 @@
-import styled from "styled-components";
 import { ITweet } from "./timeline";
 import { auth, db, storage } from "../firebase";
-import { deleteDoc, doc, updateDoc } from "firebase/firestore";
+import { addDoc, collection, deleteDoc, doc, getDocs, onSnapshot, query, updateDoc, where } from "firebase/firestore";
 import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { useEffect, useRef, useState, useCallback } from "react";
 import SvgIcon from "./svg";
@@ -10,109 +9,7 @@ import { FirebaseError } from "firebase/app";
 import Modal from "./modal";
 import RePostTweetForm from "./re-post-tweet-form";
 import { alretBox, confirmBox } from "./commonBox";
-
-const Wrapper = styled.div`
-  display: grid;    
-  grid-template-columns: 1.2cm 1fr;
-  padding: 20px 20px 10px 20px;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  border-radius: 15px;
-`;
-
-const UserDiv = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid white;
-  height: 40px;
-  width: 40px;
-  border-radius: 50%;
-  svg {
-    height: 30px;
-    width: 30px;
-  }
-`;
-
-const AvatarImg = styled.img`
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-`;
-
-const Column = styled.div``;
-
-const Header = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: relative;
-`;
-
-const UserNm = styled.span`
-  font-weight: bold;
-  font-size: 16px;
-  margin-right: 10px;
-`;
-const UserId  = styled.span`
-    font-weight: 200;
-    font-size: 14px;
-    color: gray;
-`;
-const MorDiv = styled.div`
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center; 
-  &:hover {
-    border-radius: 50%;
-    background-color: rgba(29, 161, 242, 0.4); 
-    svg {
-      fill: rgb(29, 161, 242);
-    }
-  }      
-`;
-
-const Payload = styled.div`
-  margin: 10px 0;
-  font-size: 14px;
-  word-wrap: break-word;
-  white-space: pre-wrap;
-`;
-
-const Photo = styled.img`
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  border-radius: 15px;
-  max-width: 100%;
-  max-height: 516px;
-`;
-const Foopter = styled.div`
-    margin-left: 30px;
-    display: flex;
-    justify-content: space-around; /* Adjust spacing between items */
-    align-items: center; /* Optional: background color for visibility */
-    padding: 10px; /* Optional: padding for overall space */
-    border-radius: 8px; /* Optional: rounded corners */
-`;
-
-const Span = styled.span`
-    display: flex;
-    align-items: center;
-    font-size: 11px; /* Adjust as needed */
-    cursor: pointer; /* Change cursor to pointer to indicate clickability */
-    transition: color 0.3s ease; /* Smooth color transition on hover */
-    margin-right: 10px;
-    svg {
-        fill: rgba(255,255,255,0.8);
-        margin-right: 8px; /* Space between icon and text */
-        &:hover {
-            fill: #1d9bf0; /* Color on hover */
-        }
-    }
-`;
-
-const ChatSpan = styled(Span)``;
-const UpSpan = styled(Span)``;
-const DownSpan = styled(Span)``;
+import { AvatarImg, ChatSpan, Column, DownSpan, Foopter, Header, MorDiv, Payload, Photo, UpSpan, UserDiv, UserId, UserNm, Wrapper } from "../css/tweetCss";
 
 interface TweetProps extends ITweet {}
 
@@ -134,11 +31,15 @@ export default function Tweet({
     isModalOpen: false,
     modalContent: tweet,
     modalFileUrl: photo_url as string | null,
-    tweetId: id
+    tweetId: id,
+    likes: 0,
+    dislikes: 0,
+    userLikeStatus: null as boolean | null
   });
 
-  const { isLoading, avatarUrl, showDropdown, isModalOpen, modalContent, tweetId } = state;
-//프로필 이미지 가져오기
+  const { isLoading, avatarUrl, showDropdown, isModalOpen, modalContent, tweetId, likes, dislikes, userLikeStatus } = state;
+
+  // 프로필 이미지 가져오기
   useEffect(() => {
     const fetchAvatar = async () => {
       try {
@@ -156,7 +57,8 @@ export default function Tweet({
     };
     fetchAvatar();
   }, [userId]);
-//트윗 삭제
+
+  // 트윗 삭제
   const onDelete = useCallback(async () => {
     setState(prevState => ({ ...prevState, showDropdown: false }));
     const result = await confirmBox("트윗을 삭제하시겠습니까?");
@@ -175,11 +77,13 @@ export default function Tweet({
       }
     }
   }, [user?.uid, userId, isLoading, id, photo_url]);
-///트윗 수정
+
+  // 트윗 수정
   const onEdit = useCallback(() => {
     setState(prevState => ({ ...prevState, isModalOpen: true, showDropdown: false }));
   }, []);
-//트윗 수정 콜백
+
+  // 트윗 수정 콜백
   const reConentSave = useCallback(async (newContent: string, newFile?: File, isDelete?: boolean) => {
     setState(prevState => ({
         ...prevState,
@@ -188,65 +92,114 @@ export default function Tweet({
         modalFileUrl: newFile ? URL.createObjectURL(newFile) : prevState.modalFileUrl,
     }));
     try {
-        const tweetRef = doc(db, "tweets", tweetId); // state에 tweetId가 있다고 가정
+        const tweetRef = doc(db, "tweets", tweetId);
         console.log(newContent);
         await updateDoc(tweetRef, {
             tweet: newContent,
             updatedAt: Date.now()
         });
         const locationRef = ref(storage, `tweets/${user?.uid}/${tweetId}`);
-        if(isDelete){  
-          console.log(`tweets/${user?.uid}/${tweetId}`);
+        if (isDelete) {  
           await deleteObject(locationRef);
           await updateDoc(tweetRef, {
             photo_url: ""
-        });
-        }else{
+          });
+        } else {
           if (newFile) {
-              const result = await uploadBytes(locationRef, newFile);
-              const url = await getDownloadURL(result.ref);
-              await updateDoc(tweetRef, {
-                  photo_url: url
-              });
-        }
+            const result = await uploadBytes(locationRef, newFile);
+            const url = await getDownloadURL(result.ref);
+            await updateDoc(tweetRef, {
+              photo_url: url
+            });
+          }
         }
     } catch (e) {
         console.error("Error updating document: ", e);
     }
-}, [tweetId]);
-//드롭다운 이벤트
-const handleMorDivClick = useCallback((event: React.MouseEvent) => {
-  event.stopPropagation();
-  setState(prevState => ({ ...prevState, showDropdown: !prevState.showDropdown }));
-}, []);
-//드롭다운 옵션
-const options = [
-  { label: 'Delete', onClick: onDelete },
-  { label: 'Edit', onClick: onEdit }
-];
-  //드롭다운 닫기 이벤트
-useEffect(() => {
+  }, [tweetId]);
+
+  // 드롭다운 이벤트
+  const handleMorDivClick = useCallback((event: React.MouseEvent) => {
+    event.stopPropagation();
+    setState(prevState => ({ ...prevState, showDropdown: !prevState.showDropdown }));
+  }, []);
+
+  // 드롭다운 옵션
+  const options = [
+    { label: 'Delete', onClick: onDelete },
+    { label: 'Edit', onClick: onEdit }
+  ];
+
+  // 드롭다운 닫기 이벤트
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-        if (morDivRef.current && !morDivRef.current.contains(event.target as Node) 
+      if (morDivRef.current && !morDivRef.current.contains(event.target as Node) 
         && dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-            setState(prevState => ({ ...prevState, showDropdown: false }));
-        }
+        setState(prevState => ({ ...prevState, showDropdown: false }));
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
-        document.removeEventListener("mousedown", handleClickOutside);
-};
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, []);
 
-  const clickChat = () =>{
+  // 실시간 likes 및 dislikes 업데이트
+  useEffect(() => {
+    const likeQuery = query(collection(db, 'likes'), where("tweetId", "==", tweetId));
+    const unsubscribe = onSnapshot(likeQuery, (snapshot) => {
+      const likesData = snapshot.docs.map(doc => doc.data());
+      const likeCount = likesData.filter(like => like.likes).length;
+      const dislikeCount = likesData.filter(like => !like.likes).length;
+      const userLike = likesData.find(like => like.userId === user?.uid);
+      setState(prevState => ({ ...prevState, likes: likeCount, dislikes: dislikeCount, userLikeStatus: userLike ? userLike.likes : null  }));
+    });
+    return () => unsubscribe();
+  }, [tweetId]);
+
+  const cilckLike = async (isLike: boolean) => {
+    try {
+      const tweetQuery = query(
+        collection(db, 'likes'),
+        where("userId", "==", user?.uid),
+        where("tweetId", "==", tweetId)
+      );
+      const querySnapshot = await getDocs(tweetQuery);
+      const likes = querySnapshot.docs.map(doc => doc.data());
+      if (likes.length !== 0) {
+        alretBox("이미 좋아요/싫어요를 했습니다.");
+        return;
+      }
+      if(!isLike){
+        const result = await confirmBox("싫어요를 하시겠습니까?");
+        if(!result.isConfirmed){
+          return;
+        }
+      }
+      await addDoc(collection(db, "likes"), {
+        createdAt: Date.now(),
+        userId: user?.uid,
+        tweetId: tweetId,
+        likes: isLike
+      });
+    } catch (e) {
+      if (e instanceof FirebaseError) {
+        console.log(e)
+      }
+    }
+  };
+
+  const clickChat = () => {
     alretBox("되는 줄 알았지");
-  }
-  const clickUp = () =>{
-    alretBox("사실 안됨");
-  }
-  const clickDown = () =>{
-    alretBox("이것도");
-  }
+  };
+
+  const clickUp = () => {
+    cilckLike(true);
+  };
+
+  const clickDown = () => {
+    cilckLike(false);
+  };
   return (
     <Wrapper>
       <Column>
@@ -285,8 +238,12 @@ useEffect(() => {
       </Modal>
         <Foopter>
             <ChatSpan onClick={clickChat}><SvgIcon name="chat"/> 0</ChatSpan>
-            <UpSpan onClick={clickUp}><SvgIcon name="up_finger"/> 0</UpSpan>
-            <DownSpan onClick={clickDown}><SvgIcon name="down_finger"/> 0</DownSpan>
+            <UpSpan onClick={clickUp}>
+              <SvgIcon name="up_finger" style={{ fill: userLikeStatus === true ? '#1d9bf0' : 'rgba(255,255,255,0.8)' }} /> {likes}
+            </UpSpan>
+            <DownSpan onClick={clickDown}>
+              <SvgIcon name="down_finger" style={{ fill: userLikeStatus === false ? '#ff5a5f' : 'rgba(255,255,255,0.8)' }} />  {dislikes}
+            </DownSpan>
       </Foopter>
     </Wrapper>
   );

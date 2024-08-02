@@ -1,4 +1,3 @@
-import styled, { css } from "styled-components";
 import { auth, db, storage } from "../firebase";
 import { useEffect, useRef, useState } from "react";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
@@ -7,105 +6,8 @@ import { collection, DocumentData, limit, onSnapshot, orderBy, query, QueryDocum
 import Tweet from "../components/tweet";
 import { ITweet } from "../components/timeline";
 import SvgIcon from "../components/svg";
-import { slideInFromTop, slideOutToTop } from "../css/animation";
 import { confirmBox } from "../components/commonBox";
-
-const Wrapper = styled.div`
-    display: grid;
-    grid-template-rows: 1fr 5fr;
-    gap: 20px;
-    overflow-y: auto; 
-
-    &::-webkit-scrollbar {
-        width: 0px;
-        background: none;
-    }
-`;
-const AvatarContainer = styled.div`
-    display: flex;
-    justify-content: center;
-    align-items: center;
-`;
-
-const AvatarUpload = styled.label`
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    background-color: #1d9bf0;
-    cursor: pointer;
-    overflow: hidden; /* Ensure image fits inside the circle */
-    position: relative; /* Ensure relative positioning */
-    svg {
-        height: 50px;
-        width: 50px;
-    }
-`;
-const AvatarImg = styled.img`
-    width: 100%;
-    height: 100%;
-    object-fit: cover; /* Ensure image covers the container */
-`;
-
-const AvatarInput = styled.input`
-   display: none; /* Hide the input element */
-`;
-const NameDiv = styled.div`
-margin: 0px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-`;
-
-const SvgSpan = styled.span`
-    margin-left: 10px; /* Add space between name and edit icon */
-    cursor: pointer;
-`;
-
-const Name = styled.input<{ $isEditable: boolean }>`
-    background-color: transparent;
-    border: none;
-    color: white;
-    text-align: center;
-    pointer-events: ${(props) => (props.$isEditable ? "auto" : "none")};
-    font-size: 22px;
-    border-bottom: ${(props) => (props.$isEditable ? "1px solid white" : "none")};
-    outline: none;
-`;
-
-const Tweets = styled.div`
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-`;
-
-const UpArrow = styled.div<{ $show: boolean }>`
-    display: ${({ $show }) => ($show ? 'flex' : 'none')};
-    justify-content: center;
-    align-items: center;
-    position: fixed;
-    background-color: rgba(29, 155, 240);
-    color: white;
-    border: 3px solid white;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    z-index: 1000;
-    bottom: 20px; /* Adjusted to be closer to the bottom */
-    left: 50%; /* Center horizontally */
-    transform: translateX(-50%); /* Center horizontally */
-    opacity: 0;
-    animation: ${({ $show }) =>
-        $show
-            ? css`${slideInFromTop} 0.8s ease-out forwards`
-            : css`${slideOutToTop} 0.8s ease-in forwards`};
-    svg {
-        width: 25px;
-        height: 25px;
-        stroke: white;
-        stroke-width: 2;
-    }
-`;
+import { Wrapper, AvatarContainer, AvatarUpload, AvatarImg, AvatarInput, NameDiv,SvgSpan, Name, Tweets, UpArrow } from "../css/profileCss";
 
 export default function Profile() {
     const user = auth.currentUser;
