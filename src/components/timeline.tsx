@@ -1,5 +1,5 @@
 import { useImperativeHandle, forwardRef, useState, useCallback, useEffect } from 'react';
-import { collection, DocumentData, limit, onSnapshot, orderBy, query, QueryDocumentSnapshot, startAfter, where } from 'firebase/firestore';
+import { collection, DocumentData, limit, onSnapshot, orderBy, query, QueryDocumentSnapshot, startAfter } from 'firebase/firestore';
 import { db } from '../firebase';
 import Tweet from './tweet';
 import styled from 'styled-components';
