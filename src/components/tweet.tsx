@@ -161,29 +161,35 @@ export default function Tweet({
 
   const cilckLike = async (isLike: boolean) => {
     try {
-      const tweetQuery = query(
-        collection(db, 'likes'),
-        where("userId", "==", user?.uid),
-        where("tweetId", "==", tweetId)
-      );
-      const querySnapshot = await getDocs(tweetQuery);
-      const likes = querySnapshot.docs.map(doc => doc.data());
-      if (likes.length !== 0) {
-        alretBox("이미 좋아요/싫어요를 했습니다.");
+      if (userLikeStatus === false)  {
+        alretBox("해당 글에 싫어요를 했습니다.");
         return;
       }
       if(!isLike){
-        const result = await confirmBox("싫어요를 하시겠습니까?");
+        const result = await confirmBox("싫어요를 하시겠습니까?\n싫어요는 취소가 불가능합니다.");
         if(!result.isConfirmed){
           return;
         }
       }
-      await addDoc(collection(db, "likes"), {
-        createdAt: Date.now(),
-        userId: user?.uid,
-        tweetId: tweetId,
-        likes: isLike
-      });
+      const likeQuery = query(
+        collection(db, 'likes'),
+        where("userId", "==", user?.uid),
+        where("tweetId", "==", tweetId)
+      );
+      const querySnapshot = await getDocs(likeQuery);
+      const existingLikes = querySnapshot.docs.map(doc => doc.id);
+  
+      if (existingLikes.length > 0) {
+        // 이미 좋아요/싫어요 상태가 있는 경우, 삭제
+        await deleteDoc(doc(db, "likes", existingLikes[0]));
+      }else{
+        await addDoc(collection(db, "likes"), {
+          createdAt: Date.now(),
+          userId: user?.uid,
+          tweetId: tweetId,
+          likes: isLike
+        });
+      }
     } catch (e) {
       if (e instanceof FirebaseError) {
         console.log(e)
