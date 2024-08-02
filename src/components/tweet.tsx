@@ -10,6 +10,7 @@ import Modal from "./modal";
 import RePostTweetForm from "./re-post-tweet-form";
 import { alretBox, confirmBox } from "./commonBox";
 import { AvatarImg, ChatSpan, Column, DownSpan, Foopter, Header, MorDiv, Payload, Photo, UpSpan, UserDiv, UserId, UserNm, Wrapper } from "../css/tweetCss";
+import { timeStamp } from "./timeStamp";
 
 interface TweetProps extends ITweet {}
 
@@ -18,7 +19,8 @@ export default function Tweet({
   photo_url,
   tweet,
   userId,
-  id
+  id,
+  createdAt
 }: TweetProps) {
   const user = auth.currentUser;
   const morDivRef = useRef<HTMLDivElement | null>(null);
@@ -216,7 +218,7 @@ export default function Tweet({
       </Column>
       <Column>
         <Header>
-          <UserNm>{userNm}<UserId> @{userId.slice(0, 4)}</UserId></UserNm>
+          <UserNm>{userNm}<UserId> @{userId.slice(0, 4)} · {timeStamp(createdAt)}</UserId></UserNm>
           {user?.uid === userId && (
             <MorDiv ref={morDivRef} onClick={handleMorDivClick}>
               <SvgIcon name="moreHor" />
