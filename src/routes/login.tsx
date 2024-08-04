@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { auth } from "../firebase";
 import { Link, useNavigate } from "react-router-dom";
 import { FirebaseError } from "firebase/app";
-import { Error, Form, Input, Password, Psp, Switcher, Title, Wrapper } from "../components/auth-componet";
+import { Error, Form, Input, Password, Psp, Switcher, Title, Wrapper } from "../css/auth-componet";
 import GithubButton from "../components/github-btn";
 import { getErrorMessage } from "../components/errors-mesage";
 import SvgIcon from "../components/svg";

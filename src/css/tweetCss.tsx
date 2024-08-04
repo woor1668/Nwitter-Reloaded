@@ -70,10 +70,10 @@ export const Photo = styled.img`
 export const Foopter = styled.div`
     margin-left: 30px;
     display: flex;
-    justify-content: space-around; /* Adjust spacing between items */
-    align-items: center; /* Optional: background color for visibility */
-    padding: 10px; /* Optional: padding for overall space */
-    border-radius: 8px; /* Optional: rounded corners */
+    justify-content: space-around;
+    align-items: center; 
+    padding: 10px; 
+    border-radius: 8px;
 `;
 
 const Span = styled.span`

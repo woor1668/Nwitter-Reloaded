@@ -1,6 +1,6 @@
 import { ITweet } from "./timeline";
 import { auth, db, storage } from "../firebase";
-import { addDoc, collection, deleteDoc, doc, getDocs, onSnapshot, query, updateDoc, where } from "firebase/firestore";
+import { addDoc, collection, deleteDoc, doc, getDocs, onSnapshot, query, updateDoc, where, writeBatch } from "firebase/firestore";
 import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { useEffect, useRef, useState, useCallback } from "react";
 import SvgIcon from "./svg";
@@ -8,6 +8,7 @@ import Dropdown from "./dropdown";
 import { FirebaseError } from "firebase/app";
 import Modal from "./modal";
 import RePostTweetForm from "./re-post-tweet-form";
+import CommentsForm from "./comments-form";
 import { alretBox, confirmBox } from "./commonBox";
 import { AvatarImg, ChatSpan, Column, DownSpan, Foopter, Header, MorDiv, Payload, Photo, UpSpan, UserDiv, UserId, UserNm, Wrapper } from "../css/tweetCss";
 import { timeStamp } from "./timeStamp";
@@ -30,16 +31,18 @@ export default function Tweet({
     isLoading: false,
     avatarUrl: null as string | null,
     showDropdown: false,
-    isModalOpen: false,
+    isReTweetFormOpen: false,
+    isCommentsFormOpen: false,
     modalContent: tweet,
     modalFileUrl: photo_url as string | null,
     tweetId: id,
+    comments: 0,
     likes: 0,
     dislikes: 0,
     userLikeStatus: null as boolean | null
   });
 
-  const { isLoading, avatarUrl, showDropdown, isModalOpen, modalContent, tweetId, likes, dislikes, userLikeStatus } = state;
+  const { isLoading, avatarUrl, showDropdown, isReTweetFormOpen, isCommentsFormOpen, modalContent, tweetId, comments, likes, dislikes, userLikeStatus } = state;
 
   // 프로필 이미지 가져오기
   useEffect(() => {
@@ -72,6 +75,13 @@ export default function Tweet({
           const photoRef = ref(storage, `tweets/${userId}/${id}`);
           await deleteObject(photoRef);
         }
+        const likeQuery = query(collection(db, 'likes'), where("tweetId", "==", id));
+        const likeSnapshot = await getDocs(likeQuery);
+        const batch = writeBatch(db);
+        likeSnapshot.forEach((likeDoc) => {
+          batch.delete(likeDoc.ref);
+        });
+        await batch.commit();
       } catch (e) {
         console.error("Error deleting tweet:", e);
       } finally {
@@ -82,14 +92,14 @@ export default function Tweet({
 
   // 트윗 수정
   const onEdit = useCallback(() => {
-    setState(prevState => ({ ...prevState, isModalOpen: true, showDropdown: false }));
+    setState(prevState => ({ ...prevState, isReTweetFormOpen: true, showDropdown: false }));
   }, []);
 
   // 트윗 수정 콜백
   const reConentSave = useCallback(async (newContent: string, newFile?: File, isDelete?: boolean) => {
     setState(prevState => ({
         ...prevState,
-        isModalOpen: false,
+        isReTweetFormOpen: false,
         modalContent: newContent,
         modalFileUrl: newFile ? URL.createObjectURL(newFile) : prevState.modalFileUrl,
     }));
@@ -145,6 +155,15 @@ export default function Tweet({
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+  // 실시간 comments 업데이트
+  useEffect(() => {
+    const commentQuery = query(collection(db, 'comments'), where("tweetId", "==", tweetId));
+    const unsubscribe = onSnapshot(commentQuery, (snapshot) => {
+      const commentsCount = snapshot.size;
+      setState(prevState => ({ ...prevState, comments: commentsCount }));
+    });
+    return () => unsubscribe();
+  }, [tweetId]);
 
   // 실시간 likes 및 dislikes 업데이트
   useEffect(() => {
@@ -158,7 +177,6 @@ export default function Tweet({
     });
     return () => unsubscribe();
   }, [tweetId]);
-
   const cilckLike = async (isLike: boolean) => {
     try {
       if (userLikeStatus === false)  {
@@ -198,7 +216,7 @@ export default function Tweet({
   };
 
   const clickChat = () => {
-    alretBox("되는 줄 알았지");
+    setState(prevState => ({ ...prevState, isCommentsFormOpen: true }));
   };
 
   const clickUp = () => {
@@ -237,15 +255,24 @@ export default function Tweet({
         <Payload>{tweet}</Payload>
         {photo_url && <Photo src={photo_url} />}
       </Column>
-      <Modal isOpen={isModalOpen} onClose={() => setState(prevState => ({ ...prevState, isModalOpen: false }))}>
-        <RePostTweetForm
-          initialContent={modalContent}
-          initialFileUrl={photo_url}
-          onSave={reConentSave}
-        />
-      </Modal>
+      {isReTweetFormOpen && (
+        <Modal title="수정창" isOpen={isReTweetFormOpen} onClose={() => setState(prevState => ({ ...prevState, isReTweetFormOpen: false }))}>
+          <RePostTweetForm
+            initialContent={modalContent}
+            initialFileUrl={photo_url}
+            onSave={reConentSave}
+          />
+        </Modal>
+      )}
+      {isCommentsFormOpen && (
+        <Modal title="댓글창"  isOpen={isCommentsFormOpen} onClose={() => setState(prevState => ({ ...prevState, isCommentsFormOpen: false }))}>
+          <CommentsForm
+            tweetId={tweetId}
+          />
+        </Modal>
+      )}
         <Foopter>
-            <ChatSpan onClick={clickChat}><SvgIcon name="chat"/> 0</ChatSpan>
+            <ChatSpan onClick={clickChat}><SvgIcon name="chat"/> {comments}</ChatSpan>
             <UpSpan onClick={clickUp}>
               <SvgIcon name="up_finger" style={{ fill: userLikeStatus === true ? '#1d9bf0' : 'rgba(255,255,255,0.8)' }} /> {likes}
             </UpSpan>

@@ -1,16 +1,19 @@
 import styled from "styled-components";
 import { useRef, useState } from "react";
-import { Form, TextArea, AttachFileButton, AttachFileInput, CloseButton, Img, FileForm } from "./filecss";
+import { Form, TextArea, AttachFileButton, AttachFileInput, CloseButton, Img, FileForm } from "../css/filecss";
 import SvgIcon from "./svg";
 import { alretBox, confirmBox } from "./commonBox";
 
 const SaveButton = styled.button`
-    background: #1da1f2;
-    color: white;
-    border: none;
-    padding: 10px;
-    border-radius: 4px;
-    cursor: pointer;
+  background: rgb(29,161,242);
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  &:hover{
+    background: rgba(29,161,242, 0.7);
+  }
 `;
 
 interface rePostTweetProps {

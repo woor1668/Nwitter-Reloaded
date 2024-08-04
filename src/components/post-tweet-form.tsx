@@ -2,7 +2,7 @@ import { addDoc, collection, updateDoc } from "firebase/firestore";
 import React, { useRef, useState, useEffect } from "react";
 import { auth, db, storage } from "../firebase";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { Form, TextArea, AttachFileButton, AttachFileInput, SubmitBtn, CloseButton, FileForm, Img } from "./filecss";
+import { Form, TextArea, AttachFileButton, AttachFileInput, SubmitBtn, CloseButton, FileForm, Img } from "../css/filecss";
 import SvgIcon from "./svg";
 import { alretBox, confirmBox } from "./commonBox";
 
@@ -15,17 +15,20 @@ export default function PostTweetForm() {
     const [postTimes, setPostTimes] = useState<number[]>([]);
     const [timeLimit, setTimeLimit] = useState(false);
 
+    const MAX_ATTEMPTS = 7;
+    const COOLDOWN_TIME_MS = 30000; // 30 seconds
+
     useEffect(() => {
-        if (postTimes.length >= 7) {
+        if (postTimes.length >= MAX_ATTEMPTS) {
             const now = Date.now();
-            const thirtySecondsAgo = now - 30000;
+            const thirtySecondsAgo = now - COOLDOWN_TIME_MS;
 
             // Check if the earliest post time is within the last 30 seconds
             if (postTimes[0] > thirtySecondsAgo) {
                 setTimeLimit(true);
                 const timeoutId = setTimeout(() => {
                     setTimeLimit(false);
-                }, 30000);
+                }, COOLDOWN_TIME_MS);
                 return () => clearTimeout(timeoutId);
             }
         }
@@ -77,7 +80,7 @@ export default function PostTweetForm() {
             setState({ ...state, tweet: "" });
             setFile(null);
             setFilePreview(null);
-            setPostTimes([...postTimes, Date.now()].slice(-7));
+            setPostTimes([...postTimes, Date.now()].slice(-MAX_ATTEMPTS));
         } catch (e) {
             // Handle error here
         } finally {
