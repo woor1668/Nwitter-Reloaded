@@ -7,7 +7,7 @@ import { FirebaseError } from "firebase/app";
 import { alretBox, confirmBox } from "./commonBox";
 import SvgIcon from "./svg";
 import { timeStamp } from "./timeStamp";
-import { Comments, CommentItem, CommentHeader, AvatarImg, UserNm, UserId, Delete, CommentMain, CommentFooter, Reply, TextArea, ButtonForm, SaveButton } from "../css/comments-form-css";
+import { Comments, CommentItem, CommentHeader, AvatarImg, UserNm, UserId, Delete, CommentMain, CommentFooter, Reply } from "../css/comments-form-css";
 import { DownSpan, UpSpan } from "../css/tweetCss";
 
 // Define the Comment type
@@ -122,32 +122,32 @@ export default function Comment({
   };
   return ( 
   <Comments>
-        <CommentItem key={cmtId}>
-          <CommentHeader>
-            <UserNm>
-              <AvatarImg
-                src={avatarUrl ? avatarUrl : "/user.svg"}
-              />
-              {userNm}
-              <UserId> @{userId.slice(0, 4)} · {timeStamp(createdAt)}</UserId>
-            </UserNm>
-            {user?.uid === userId && (
-              <Delete onClick={clickDelete}>x</Delete>
-            )}
-          </CommentHeader>
-          <CommentMain>{comment}</CommentMain>
-        </CommentItem>        
-        <CommentFooter>
-                    <Reply onClick={clickReply}>
-                      <SvgIcon name="plus"/>답글
-                    </Reply>
-                    <UpSpan onClick={() => cliCkmtLike(true)}>
-                      <SvgIcon name="up_finger" style={{ fill: userLikeStatus === true ? '#1d9bf0' : 'rgba(255,255,255,0.8)' }} /> {likes}
-                    </UpSpan>
-                    <DownSpan onClick={() => cliCkmtLike(false)}>
-                      <SvgIcon name="down_finger" style={{ fill: userLikeStatus === false ? '#ff5a5f' : 'rgba(255,255,255,0.8)' }} /> {dislikes}
-                    </DownSpan>
-                  </CommentFooter>
+    <CommentItem key={cmtId}>
+      <CommentHeader>
+        <UserNm>
+          <AvatarImg
+            src={avatarUrl ? avatarUrl : "/user.svg"}
+          />
+          {userNm}
+          <UserId> @{userId.slice(0, 4)} · {timeStamp(createdAt)}</UserId>
+        </UserNm>
+        {user?.uid === userId && (
+          <Delete onClick={clickDelete}>x</Delete>
+        )}
+      </CommentHeader>
+      <CommentMain>{comment}</CommentMain>
+      <CommentFooter>
+        <Reply onClick={clickReply}>
+          <SvgIcon name="plus"/>답글
+        </Reply>
+        <UpSpan onClick={() => cliCkmtLike(true)}>
+          <SvgIcon name="up_finger" style={{ fill: userLikeStatus === true ? '#1d9bf0' : 'rgba(255,255,255,0.8)' }} /> {likes}
+        </UpSpan>
+        <DownSpan onClick={() => cliCkmtLike(false)}>
+          <SvgIcon name="down_finger" style={{ fill: userLikeStatus === false ? '#ff5a5f' : 'rgba(255,255,255,0.8)' }} /> {dislikes}
+        </DownSpan>
+      </CommentFooter>
+    </CommentItem>        
   </Comments>
  );
 };

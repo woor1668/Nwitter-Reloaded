@@ -255,7 +255,7 @@ export default function Tweet({
         {photo_url && <Photo src={photo_url} />}
       </Column>
       {isReTweetFormOpen && (
-        <Modal title="수정창" isOpen={isReTweetFormOpen} onClose={() => setState(prevState => ({ ...prevState, isReTweetFormOpen: false }))}>
+        <Modal title="수정창" isOpen={isReTweetFormOpen} onClose={() => setState(prevState => ({ ...prevState, isReTweetFormOpen: false }))} x={2.5} y={2.5}>
           <RePostTweetForm
             initialContent={modalContent}
             initialFileUrl={photo_url}
@@ -264,7 +264,7 @@ export default function Tweet({
         </Modal>
       )}
       {isCommentsFormOpen && (
-        <Modal title="댓글창"  isOpen={isCommentsFormOpen} onClose={() => setState(prevState => ({ ...prevState, isCommentsFormOpen: false }))}>
+        <Modal title="댓글창"  isOpen={isCommentsFormOpen} onClose={() => setState(prevState => ({ ...prevState, isCommentsFormOpen: false }))} x={7} y={1.7}>
           <CommentsForm
             tweetId={tweetId}
           />

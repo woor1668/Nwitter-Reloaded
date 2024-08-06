@@ -5,15 +5,34 @@ import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { Form, TextArea, AttachFileButton, AttachFileInput, SubmitBtn, CloseButton, FileForm, Img } from "../css/filecss";
 import SvgIcon from "./svg";
 import { alretBox, confirmBox } from "./commonBox";
+import styled from "styled-components";
 
+const Noti = styled.input.attrs({ type: 'checkbox' })`
+  /* Style the checkbox */
+  width: 20px;
+  height: 20px;
+  accent-color: #1d9bf0; /* Use for modern browsers */
+  cursor: pointer;
+
+  /* Optional styling */
+  &:checked {
+    background-color: #1d9bf0;
+    border: 2px solid #1d9bf0;
+  }
+
+  &:hover {
+    border-color: #1d9bf0;
+  }
+`;
 export default function PostTweetForm() {
-    const [state, setState] = useState({ isLoading: false, tweet: "" });
+    const [state, setState] = useState({ isLoading: false, tweet: "", isNotiChecked: false});
     const [file, setFile] = useState<File | null>(null);
-    const { isLoading, tweet } = state;
+    const { isLoading, tweet, isNotiChecked } = state;
     const [filePreview, setFilePreview] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [postTimes, setPostTimes] = useState<number[]>([]);
     const [timeLimit, setTimeLimit] = useState(false);
+    const user = auth.currentUser;
 
     const MAX_ATTEMPTS = 7;
     const COOLDOWN_TIME_MS = 30000; // 30 seconds
@@ -63,24 +82,33 @@ export default function PostTweetForm() {
         setState({ ...state, isLoading: true });
 
         try {
-            const doc = await addDoc(collection(db, "tweets"), {
-                tweet,
-                createdAt: Date.now(),
-                userNm: user.displayName || "Anonymous",
-                userId: user.uid
-            });
-            if (file) {
-                const locationRef = ref(storage, `tweets/${user.uid}/${doc.id}`);
-                const result = await uploadBytes(locationRef, file);
-                const url = await getDownloadURL(result.ref);
-                await updateDoc(doc, {
-                    photo_url: url
+            if(isNotiChecked){
+                await addDoc(collection(db, "notication"), {
+                    notication: tweet,
+                    createdAt: Date.now(),
+                    userNm: user.displayName || "Anonymous",
+                    userId: user.uid
                 });
+            }else{
+                const doc = await addDoc(collection(db, "tweets"), {
+                    tweet,
+                    createdAt: Date.now(),
+                    userNm: user.displayName || "Anonymous",
+                    userId: user.uid
+                });
+                if (file) {
+                    const locationRef = ref(storage, `tweets/${user.uid}/${doc.id}`);
+                    const result = await uploadBytes(locationRef, file);
+                    const url = await getDownloadURL(result.ref);
+                    await updateDoc(doc, {
+                        photo_url: url
+                    });
+                }
+                setFile(null);
+                setFilePreview(null);
+                setPostTimes([...postTimes, Date.now()].slice(-MAX_ATTEMPTS));
             }
             setState({ ...state, tweet: "" });
-            setFile(null);
-            setFilePreview(null);
-            setPostTimes([...postTimes, Date.now()].slice(-MAX_ATTEMPTS));
         } catch (e) {
             // Handle error here
         } finally {
@@ -110,8 +138,13 @@ export default function PostTweetForm() {
         }
     };
 
+    const handleNotiChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setState({...state, isNotiChecked :(e.target.checked)});
+    };
+
     return (
         <Form onSubmit={onSubmit}>
+            {user?.uid == "WM9cVjNevcdgd7ay7fmXovBvIUg1" && <div><Noti checked={isNotiChecked} onChange={handleNotiChange}/> 공지사항</div>}
             <TextArea rows={5} maxLength={180} onChange={onChange} value={tweet} onKeyDown={onKeyDown} placeholder="글을 작성하세요(줄바꾸기 shift+enter)" required />
             <AttachFileButton $hasFile={!file} htmlFor="file">{file ? `Photo added` : "Add photo"}</AttachFileButton>
             <AttachFileInput onChange={onFileChange} ref={fileInputRef} type="file" id="file" accept="image/*" />

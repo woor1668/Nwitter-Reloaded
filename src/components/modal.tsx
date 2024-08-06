@@ -48,11 +48,13 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  x: number;
+  y: number;
 }
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, x, y}) => {
   const modalRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState({ top: window.innerHeight / 3, left: window.innerWidth / 2.5 });
+  const [position, setPosition] = useState({ top: window.innerHeight / x, left: window.innerWidth / y });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 

@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { addDoc, collection, onSnapshot, query, orderBy, where, limit, startAfter, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
-import { auth, db, storage } from '../firebase';
-import { getDownloadURL } from 'firebase/storage';
+import { auth, db } from '../firebase';
 import { FirebaseError } from 'firebase/app';
 import Comments from './comment';
-import { ButtonForm, Form, SaveButton, TextArea } from '../css/comments-form-css';
+import { ButtonForm, CommentWarpper, Form, SaveButton, TextArea } from '../css/comments-form-css';
 
 // Define the Comment type
 export interface IComment {
@@ -166,10 +165,15 @@ const CommentsForm = forwardRef<CommentsFormHandle, CommentsProps>(({ tweetId },
 
   return (
     <Form>
-      {comments.map((comment) => (
-        <Comments key={comment.cmtId} {...comment} />
-      ))}
-      {isLoading && <div>Loading...</div>}
+      <CommentWarpper>
+        {comments.length === 0 && !isLoading && (
+          "댓글을 작성하세요"
+        )}
+        {comments.map((comment) => (
+          <Comments key={comment.cmtId} {...comment} />
+        ))}
+        {isLoading && <div>Loading...</div>}
+      </CommentWarpper>
       <TextArea
         rows={4}
         cols={60}

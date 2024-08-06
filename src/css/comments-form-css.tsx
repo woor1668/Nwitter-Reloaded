@@ -8,6 +8,19 @@ export const Form = styled.div`
     gap: 10px;
 `;
 
+export const CommentWarpper = styled.div`
+  
+  display: grid;
+  gap: 5px;
+  max-height: 500px; /* Adjust the height as needed */
+  overflow-y: auto;
+  border-radius: 5px; 
+  &::-webkit-scrollbar {
+        width: 0px;
+        background: none;
+    }
+`;
+
 export const Comments = styled.div`
     max-height: 300px; /* Adjust as needed */
     overflow-y: auto;
@@ -22,7 +35,6 @@ export const Comments = styled.div`
 
 export const CommentItem = styled.div`
     color: white;
-    border-bottom: 1px solid #444;
 `;
 
 export const CommentHeader = styled.div`
@@ -66,6 +78,8 @@ export const Delete = styled.p`
 
 export const CommentMain = styled.div`
     padding: 10px;
+    word-wrap: break-word;
+    white-space: pre-wrap;
 `;
 
 export const CommentFooter = styled.div`
