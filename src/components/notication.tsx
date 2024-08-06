@@ -31,7 +31,6 @@ const NotiCont = styled.div`
 `;
 
 export default function Notication({
-  id,
   notication
 }: notiProps) {
     return(
