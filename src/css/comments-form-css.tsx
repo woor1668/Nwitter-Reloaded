@@ -22,7 +22,6 @@ export const Comments = styled.div`
 
 export const CommentItem = styled.div`
     color: white;
-    margin-bottom: 10px;
     border-bottom: 1px solid #444;
 `;
 

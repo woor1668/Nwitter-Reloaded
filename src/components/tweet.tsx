@@ -105,7 +105,6 @@ export default function Tweet({
     }));
     try {
         const tweetRef = doc(db, "tweets", tweetId);
-        console.log(newContent);
         await updateDoc(tweetRef, {
             tweet: newContent,
             updatedAt: Date.now()
