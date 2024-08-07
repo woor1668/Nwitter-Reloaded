@@ -101,11 +101,11 @@ export default function CmtReply({
   };
 
   const clickDelete = async() =>{
-    const result = await confirmBox("트윗을 삭제하시겠습니까?");
+    const result = await confirmBox("답글을 삭제하시겠습니까?");
     if (result.isConfirmed && user?.uid === userId && !isLoading) {
       try {
         setState({...state, isLoading: true });
-        await deleteDoc(doc(db, "comments", repId));
+        await deleteDoc(doc(db, "reples", repId));
       } catch (e) {
         console.error("Error deleting tweet:", e);
       } finally {

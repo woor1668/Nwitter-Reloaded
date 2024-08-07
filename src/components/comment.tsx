@@ -115,7 +115,7 @@ export default function Comment({
   };
 
   const clickDelete = async() =>{
-    const result = await confirmBox("트윗을 삭제하시겠습니까?");
+    const result = await confirmBox("댓글을 삭제하시겠습니까?");
     if (result.isConfirmed && user?.uid === userId && !isLoading) {
       try {
         setState({...state, isLoading: true });
