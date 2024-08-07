@@ -22,15 +22,8 @@ export const CommentWarpper = styled.div`
 `;
 
 export const Comments = styled.div`
-    max-height: 300px; /* Adjust as needed */
-    overflow-y: auto;
     border: 2px solid #444;
     border-radius: 10px;    
-
-    &::-webkit-scrollbar {
-        width: 0px;
-        background: none;
-    }
 `;
 
 export const CommentItem = styled.div`
@@ -90,6 +83,7 @@ export const CommentFooter = styled.div`
 `;
 
 export const Reply = styled.span`
+    cursor: pointer;
     font-size: 12px;
     margin-right: 10px;
     svg {
@@ -137,5 +131,20 @@ export const SaveButton = styled.button`
     cursor: pointer;
     &:hover {
         background: rgba(29, 161, 242, 0.7);
+    }
+`;
+
+export const ReplyWrapper = styled.form``;
+export const Rples = styled.div``;
+export const RepIcon = styled.span`
+    margin-right: 7px;
+    width: 15px;
+    height: 15px;
+    background: tomato;
+    svg{
+        width: 15px;
+        height: 15px;
+        fill: none;
+        color: black;
     }
 `;

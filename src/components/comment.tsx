@@ -1,16 +1,23 @@
 import { IComment } from "./comments-form";
-import { addDoc, collection, onSnapshot, query,  where, getDocs, deleteDoc, doc } from "firebase/firestore";
+import { addDoc, collection, onSnapshot, query,  where, getDocs, deleteDoc, doc, orderBy } from "firebase/firestore";
 import { auth, db, storage } from "../firebase";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getDownloadURL, ref } from "firebase/storage";
 import { FirebaseError } from "firebase/app";
 import { alretBox, confirmBox } from "./commonBox";
 import SvgIcon from "./svg";
 import { timeStamp } from "./timeStamp";
-import { Comments, CommentItem, CommentHeader, AvatarImg, UserNm, UserId, Delete, CommentMain, CommentFooter, Reply } from "../css/comments-form-css";
+import { Comments, CommentItem, CommentHeader, AvatarImg, UserNm, UserId, Delete, CommentMain, CommentFooter, Reply, TextArea, ButtonForm, SaveButton, ReplyWrapper } from "../css/comments-form-css";
 import { DownSpan, UpSpan } from "../css/tweetCss";
+import CmtReply from "./cmt-reply";
 
-// Define the Comment type
+export interface IReply {
+  repId: string;
+  userId: string;
+  userNm: string;
+  reply: string;
+  createdAt: number;
+}
 interface CommentProps extends IComment {
   cmtId: string;
   userId: string;
@@ -18,6 +25,8 @@ interface CommentProps extends IComment {
   comment: string;
   createdAt: number;
 }
+const MAX_ATTEMPTS = 7;
+const COOLDOWN_TIME_MS = 30000; // 30 seconds
 export default function Comment({
     cmtId,
     userId,
@@ -29,12 +38,16 @@ export default function Comment({
     const [state, setState] = useState({
       isLoading: false,
       avatarUrl: null as string | null,
+      isReply: false,
       likes: 0,
       dislikes: 0,
       userLikeStatus: null as boolean | null
     });
-
-    const { avatarUrl, likes, dislikes, userLikeStatus, isLoading } = state;
+    const [reples, setReples] = useState<IReply[]>([]);
+    const [repVal, setRepVal] = useState<string>('');
+    const [postTimes, setPostTimes] = useState<number[]>([]);
+    const [timeLimit, setTimeLimit] = useState(false);
+    const { avatarUrl, likes, dislikes, userLikeStatus, isLoading, isReply } = state;
 
     useEffect(() => {
       const fetchAvatar = async () => {
@@ -105,7 +118,7 @@ export default function Comment({
     const result = await confirmBox("트윗을 삭제하시겠습니까?");
     if (result.isConfirmed && user?.uid === userId && !isLoading) {
       try {
-        setState(prevState => ({ ...prevState, isLoading: true }));
+        setState({...state, isLoading: true });
         await deleteDoc(doc(db, "comments", cmtId));
       } catch (e) {
         console.error("Error deleting tweet:", e);
@@ -114,11 +127,102 @@ export default function Comment({
       }
     }; 
   };
+  //답글 로직
+  const fetchReply = useCallback(() => {
+    setState({...state, isLoading: true });
+    const ReplyQuery = query(
+      collection(db, 'reples'),
+      where('cmtId', '==', cmtId),
+      orderBy('createdAt', 'desc'),
+    );
+
+    const unsubscribe = onSnapshot(ReplyQuery, async (snapshot) => {
+      if (!snapshot.empty) {
+          const newReples = await Promise.all(snapshot.docs.map(async (doc) => ({
+            repId: doc.id,
+            userId: doc.data().userId,
+            userNm: doc.data().userNm || 'Anonymous',
+            reply: doc.data().comment,
+            createdAt: doc.data().createdAt,
+          })));
+          setReples(newReples);
+        }
+        setState(prevState => ({ ...prevState, isLoading: false }));
+      }, (error) => {
+      console.error('Error fetching Replys:', error);
+      setState(prevState => ({ ...prevState, isLoading: false }));
+    });
+
+    return unsubscribe;
+  }, [cmtId]);
+
+  useEffect(() => {
+    const unsubscribe = fetchReply();
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [fetchReply]);
+
   const clickReply = () => {
-    alretBox("또 속았지");
+    setState({...state, isReply: !isReply});
   };
   const cliCkmtLike = (isLike: boolean) => {
     cilckLike(isLike);
+  };
+
+  const onReplySave = async () => {
+    if (isLoading || !repVal.trim() || timeLimit) return;
+    setState({...state, isLoading: true});
+    try {
+      if (!user) {
+        console.warn('User not logged in.');
+        return;
+      }
+      const newComment = {
+        createdAt: Date.now(),
+        cmtId: cmtId,
+        userId: user.uid,
+        userNm: user.displayName || 'Anonymous',
+        comment: repVal,
+      };
+      await addDoc(collection(db, 'reples'), newComment);
+      setPostTimes((prevPostTimes) => [...prevPostTimes, Date.now()].slice(-MAX_ATTEMPTS));
+      setRepVal(''); // Clear comment input after saving
+    } catch (e) {
+      if (e instanceof FirebaseError) {
+        console.error('Error saving comment:', e);
+      }
+    } finally {
+      setState(prevState => ({ ...prevState,  isLoading: true, isReply: false}));
+    }
+  };
+
+  useEffect(() => {
+    if (postTimes.length >= MAX_ATTEMPTS) {
+      const now = Date.now();
+      const thirtySecondsAgo = now - COOLDOWN_TIME_MS;
+
+      if (postTimes[0] > thirtySecondsAgo) {
+        setTimeLimit(true);
+        const timeoutId = setTimeout(() => {
+          setTimeLimit(false);
+        }, COOLDOWN_TIME_MS);
+        return () => clearTimeout(timeoutId);
+      }
+    }
+  }, [postTimes]);
+
+  const onChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setRepVal(e.target.value);
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (repVal.trim()) {
+        onReplySave();
+      }
+    }
   };
   return ( 
   <Comments>
@@ -147,7 +251,28 @@ export default function Comment({
           <SvgIcon name="down_finger" style={{ fill: userLikeStatus === false ? '#ff5a5f' : 'rgba(255,255,255,0.8)' }} /> {dislikes}
         </DownSpan>
       </CommentFooter>
-    </CommentItem>        
+    </CommentItem>  
+    {isReply &&
+      <ReplyWrapper>
+        <TextArea
+          rows={4}
+          cols={60}
+          value={repVal}
+          onChange={onChange}
+          placeholder={timeLimit ? '잠시 후에 다시 작성해주세요.' : '답글을 작성하세요...'}
+          onKeyDown={onKeyDown}
+          disabled={timeLimit}
+        />
+        <ButtonForm>
+          <SaveButton type="button" onClick={onReplySave} disabled={isLoading || timeLimit}>
+            {isLoading ? '저장 중...' : '답글 저장'}
+          </SaveButton>
+        </ButtonForm>
+      </ReplyWrapper>
+    }      
+    {reples.map((reply) => (
+      <CmtReply key={reply.repId} {...reply} />
+    ))}
   </Comments>
  );
 };
